@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct FileMetadata {
     /// Inode number
     pub ino: u64,
