@@ -15,21 +15,20 @@ struct File {
     metadata: FileMetadata,
 }
 
-fn into_file(entry: DirEntry) -> Result<File> {
-    let path = entry.path();
-    let flag = entry.file_type().map(|ft| ft.is_file()).unwrap_or(false);
-    if !flag {
-        let path = &path.display();
-        bail!("unable to read file_type or it is not a file: {path}");
+impl TryFrom<DirEntry> for File {
+    type Error = anyhow::Error;
+
+    fn try_from(value: DirEntry) -> std::result::Result<Self, Self::Error> {
+        let path = value.path();
+        let metadata = value
+            .metadata()
+            .map(metadata::convert_metadata)
+            .with_context(|| format!("unable to query metadata to {}", path.display()))?;
+        if metadata.size == 0 {
+            bail!("file is empty");
+        }
+        Ok(File { path, metadata })
     }
-    let metadata = entry
-        .metadata()
-        .map(metadata::convert_metadata)
-        .with_context(|| format!("unable to query metadata to {}", path.display()))?;
-    if metadata.size == 0 {
-        bail!("file is empty");
-    }
-    Ok(File { path, metadata })
 }
 
 type FileExtension = u32;
@@ -186,10 +185,14 @@ fn main() {
     let path = Path::new("/home/sunnysab");
     let mut duplicate = Duplicate::new();
 
-    // TODO: Walker 需要支持跳过隐藏的文件夹.
-    let walker = FileWalker::open(&path).unwrap();
+    let walker = FileWalker::open(&path)
+        .expect("failed to read start directory")
+        .file_only(true)
+        .filter_hidden_items(true)
+        .flatten();
+
     for item in walker {
-        let file = match item.map_err(Into::into).and_then(into_file) {
+        let file = match File::try_from(item) {
             Ok(f) => f,
             Err(e) => {
                 eprintln!("warning: {e}");
