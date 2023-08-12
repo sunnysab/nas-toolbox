@@ -35,7 +35,7 @@ pub fn checksum_file<P: AsRef<Path>>(path: P, mode: CompareMode) -> Result<blake
         if len == 0 {
             break;
         }
-        let current_hash_len = std::cmp::min(compare_size - hashed_size, CHUNK_SIZE);
+        let current_hash_len = std::cmp::min(len, CHUNK_SIZE);
         hasher.update(&buffer[..current_hash_len]);
         hashed_size += len;
 
