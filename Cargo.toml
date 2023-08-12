@@ -9,3 +9,9 @@ edition = "2021"
 anyhow = "1.0.72"
 blake3 = "1.4.1"
 filewalker = { path = "../filewalker"}
+
+[profile.release]
+lto = "fat"
+opt-level = 3
+codegen-units = 1
+strip = true
