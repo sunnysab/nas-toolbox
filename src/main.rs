@@ -26,7 +26,9 @@ fn into_file(entry: DirEntry) -> Result<File> {
         .metadata()
         .map(metadata::convert_metadata)
         .with_context(|| format!("unable to query metadata to {}", path.display()))?;
-
+    if metadata.size == 0 {
+        bail!("file is empty");
+    }
     Ok(File { path, metadata })
 }
 
@@ -65,15 +67,17 @@ enum PreviousScanned {
     Hash(HashSet<blake3::Hash>),
 }
 
+#[derive(Eq, PartialEq, Hash)]
+struct ClassifyingKey(FileExtension, FileSize);
+
 struct Duplicate<'a> {
     records: Vec<File>,
 
     inode_set: HashSet<u64>,
-    /// file extension -> {
-    ///     2KB -> {hash1, hash2, hash3, ...}
-    ///     4MB -> {hash1, hash2, ...}
-    /// }
-    set: HashMap<FileExtension, HashMap<FileSize, PreviousScanned>>,
+    /// (.pdf, 2MB) -> {a.pdf, b.pdf, c.pdf}
+    /// (.pdf, 30M) -> {q.pdf, l.pdf}
+    /// (.mp4, 400M) -> (1.mp4)
+    set: HashMap<ClassifyingKey, PreviousScanned>,
     /// file hash -> [2, 4, ...]
     hash2files: HashMap<blake3::Hash, Vec<RecordIndex>>,
 
@@ -87,8 +91,8 @@ impl<'a> Duplicate<'a> {
         Duplicate {
             records: Vec::with_capacity(Self::DEFAULT_SIZE),
             inode_set: HashSet::with_capacity(Self::DEFAULT_SIZE),
-            set: HashMap::new(),
-            hash2files: HashMap::new(),
+            set: HashMap::with_capacity(Self::DEFAULT_SIZE),
+            hash2files: HashMap::with_capacity(Self::DEFAULT_SIZE),
             _marker: Default::default(),
         }
     }
@@ -117,53 +121,45 @@ impl<'a> Duplicate<'a> {
 
         // 将当前文件信息存起, 便于后续比对.
         let index = self.append_record(file);
-        if let Some(size_map) = self.set.get_mut(&extension) {
-            if let Some(previous_result) = size_map.get_mut(&size) {
-                // 存在与当前文件相同扩展名和大小的文件，且 inode 不同.
-                // 需要通过哈希值进行最终的判断
-                let hash = hash::checksum_file(&path, hash::MODE_HEAD_1M)?;
-                // 这里使用了 PreviousScanned 结构. 由于估计存在大量非重复文件, 对于第一次出现满足某个 (ext, size)
-                // 组合的文件只记录其下标, 等到第二次遇到该组合时再计算其哈希值, 以减少计算量
-                if let PreviousScanned::Index(previous_index) = previous_result {
-                    let file = &self.records[*previous_index];
-                    let previous_hash = hash::checksum_file(&file.path, hash::MODE_HEAD_1M)?;
+        let key = ClassifyingKey(extension, size);
+        if let Some(previous_result) = self.set.get_mut(&key) {
+            // 存在与当前文件相同扩展名和大小的文件，且 inode 不同.
+            // 需要通过哈希值进行最终的判断
+            let hash = hash::checksum_file(&path, hash::MODE_HEAD_1M)?;
+            // 这里使用了 PreviousScanned 结构. 由于估计存在大量非重复文件, 对于第一次出现满足某个 (ext, size)
+            // 组合的文件只记录其下标, 等到第二次遇到该组合时再计算其哈希值, 以减少计算量
+            if let PreviousScanned::Index(previous_index) = previous_result {
+                let file = &self.records[*previous_index];
+                let previous_hash = hash::checksum_file(&file.path, hash::MODE_HEAD_1M)?;
 
-                    let mut set_of_file_hash_in_ext_size = HashSet::new();
-                    set_of_file_hash_in_ext_size.insert(previous_hash);
+                let mut set_of_file_hash_in_ext_size = HashSet::new();
+                set_of_file_hash_in_ext_size.insert(previous_hash);
 
-                    let i = *previous_index;
-                    *previous_result = PreviousScanned::Hash(set_of_file_hash_in_ext_size);
+                let i = *previous_index;
+                *previous_result = PreviousScanned::Hash(set_of_file_hash_in_ext_size);
 
-                    // 把之前扫描中遇到的这个文件, 它的哈希值不存在于 hash2files 中, 可以加进去
-                    // 这可能导致最终结果里 hash2files 出现一些 value.len() == 1 的键值对, 滤去即可
-                    self.hash2files.insert(hash, vec![i]);
-                }
-
-                // 现在 PreviousScanned 一定记录了一个哈希值的集合
-                // 如果当前文件是重复出现的, 即 hash 出现重复, 那么 set 和 hash2files 中已经存在这个哈希值了, 需要在 hash2files 登记一下
-                // 如果当前文件第一次出现, 需要将 hash 添加到 set 中, 并在 hash2files 中记录 （后面没有机会记录了）
-                if let PreviousScanned::Hash(set) = previous_result {
-                    // 依上述分析, 直接添加
-                    set.insert(hash);
-                    // 在 hash2files 里记录一下
-                    if let Some(duplicate_file_list) = self.hash2files.get_mut(&hash) {
-                        duplicate_file_list.push(index);
-                    } else {
-                        self.hash2files.insert(hash, vec![index]);
-                    }
-                } // 不需要 else, 因为已经保证 PreviousScanned 为 Hash
-            } else {
-                // 若头一次遇到组合 (ext, size)
-                let scanned_result = PreviousScanned::Index(index);
-                size_map.insert(size, scanned_result);
+                // 把之前扫描中遇到的这个文件, 它的哈希值不存在于 hash2files 中, 可以加进去
+                // 这可能导致最终结果里 hash2files 出现一些 value.len() == 1 的键值对, 滤去即可
+                self.hash2files.insert(hash, vec![i]);
             }
-        } else {
-            // 若头一次遇到 (ext, *)
-            let scanned_result = PreviousScanned::Index(index);
-            let mut size_map = HashMap::new();
 
-            size_map.insert(size, scanned_result);
-            self.set.insert(extension, size_map);
+            // 现在 PreviousScanned 一定记录了一个哈希值的集合
+            // 如果当前文件是重复出现的, 即 hash 出现重复, 那么 set 和 hash2files 中已经存在这个哈希值了, 需要在 hash2files 登记一下
+            // 如果当前文件第一次出现, 需要将 hash 添加到 set 中, 并在 hash2files 中记录 （后面没有机会记录了）
+            if let PreviousScanned::Hash(set) = previous_result {
+                // 依上述分析, 直接添加
+                set.insert(hash);
+                // 在 hash2files 里记录一下
+                if let Some(duplicate_file_list) = self.hash2files.get_mut(&hash) {
+                    duplicate_file_list.push(index);
+                } else {
+                    self.hash2files.insert(hash, vec![index]);
+                }
+            } // 不需要 else, 因为已经保证 PreviousScanned 为 Hash
+        } else {
+            // 若头一次遇到 (ext, size)
+            let scanned_result = PreviousScanned::Index(index);
+            self.set.insert(key, scanned_result);
         }
 
         Ok(())
@@ -190,6 +186,7 @@ fn main() {
     let path = Path::new("/home/sunnysab");
     let mut duplicate = Duplicate::new();
 
+    // TODO: Walker 需要支持跳过隐藏的文件夹.
     let walker = FileWalker::open(&path).unwrap();
     for item in walker {
         let file = match item.map_err(Into::into).and_then(into_file) {
