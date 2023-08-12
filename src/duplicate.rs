@@ -71,7 +71,6 @@ pub struct Duplicate<'a> {
     path: PathBuf,
 
     records: Vec<File>,
-
     inode_set: HashSet<u64>,
     /// (.pdf, 2MB) -> {a.pdf, b.pdf, c.pdf}
     /// (.pdf, 30M) -> {q.pdf, l.pdf}
@@ -80,11 +79,13 @@ pub struct Duplicate<'a> {
     /// file hash -> [2, 4, ...]
     hash2files: HashMap<blake3::Hash, Vec<RecordIndex>>,
 
+    custom_filter: Option<Box<dyn Fn(&File) -> bool>>,
+
     _marker: std::marker::PhantomData<&'a ()>,
 }
 
 impl<'a> Duplicate<'a> {
-    const DEFAULT_SIZE: usize = 1000_0000;
+    const DEFAULT_SIZE: usize = 100_0000;
 
     pub fn new<P: AsRef<Path>>(path: P) -> Duplicate<'a> {
         let path = path.as_ref().to_path_buf();
@@ -95,8 +96,14 @@ impl<'a> Duplicate<'a> {
             inode_set: HashSet::with_capacity(Self::DEFAULT_SIZE),
             set: HashMap::with_capacity(Self::DEFAULT_SIZE),
             hash2files: HashMap::with_capacity(Self::DEFAULT_SIZE),
+            custom_filter: None,
             _marker: Default::default(),
         }
+    }
+
+    pub fn custom_filter(mut self, filter: impl Fn(&File) -> bool + 'static) -> Self {
+        self.custom_filter = Some(Box::new(filter));
+        self
     }
 
     fn append_record(&mut self, file: File) -> RecordIndex {
@@ -127,7 +134,7 @@ impl<'a> Duplicate<'a> {
         if let Some(previous_result) = self.set.get_mut(&key) {
             // 存在与当前文件相同扩展名和大小的文件，且 inode 不同.
             // 需要通过哈希值进行最终的判断
-            let hash = checksum_file(&path, MODE_HEAD_1M)?;
+            let hash = checksum_file(path, MODE_HEAD_1M)?;
             // 这里使用了 PreviousScanned 结构. 由于估计存在大量非重复文件, 对于第一次出现满足某个 (ext, size)
             // 组合的文件只记录其下标, 等到第二次遇到该组合时再计算其哈希值, 以减少计算量
             if let PreviousScanned::Index(previous_index) = previous_result {
@@ -176,30 +183,34 @@ impl<'a> Duplicate<'a> {
         result
     }
 
-    fn get_groups(&'a self) -> impl Iterator<Item = Vec<&'a File>> {
+    pub fn result(&'a self) -> impl Iterator<Item = Vec<&'a File>> {
         self.hash2files
             .iter()
             .filter(|(_, v)| v.len() > 1)
             .map(|(_, record_vec)| self.map_record_vec(record_vec))
     }
 
-    pub fn discover(&'a mut self) -> Result<impl Iterator<Item = Vec<&'a File>>> {
+    pub fn discover(&mut self) -> Result<()> {
         let walker = FileWalker::open(&self.path)
-            .expect("failed to read start directory")
+            .with_context(|| format!("failed to read start directory: {}", self.path.display()))?
             .file_only(true)
             .filter_hidden_items(true)
             .flatten();
 
         for item in walker {
             if let Ok(file) = File::try_from(item) {
+                if let Some(filter) = &self.custom_filter {
+                    if !filter(&file) {
+                        continue;
+                    }
+                }
+
                 let path = file.path.clone();
                 if let Err(e) = self.push(file) {
                     eprintln!("unable to add {}: {}", path.display(), e);
                 }
             };
         }
-
-        let iter = self.get_groups();
-        Ok(iter)
+        Ok(())
     }
 }
