@@ -10,7 +10,7 @@ pub struct FileMetadata {
     pub blocks: u64,
 }
 
-#[cfg(target_os = "unix")]
+#[cfg(target_os = "freebsd")]
 pub fn convert_metadata(metadata: std::fs::Metadata) -> FileMetadata {
     use std::os::unix::fs::MetadataExt;
 
