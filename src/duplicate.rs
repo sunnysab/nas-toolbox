@@ -69,6 +69,10 @@ impl DefaultFilter<'_> {
             .collect::<Vec<_>>();
         Self { ext: ext_set }
     }
+
+    pub fn ext_set() -> &'static [&'static str] {
+        &DEFAULT_EXT_FILTER
+    }
 }
 impl ScanFilter for DefaultFilter<'_> {
     fn filter(&self, file: &File) -> bool {

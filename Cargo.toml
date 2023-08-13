@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.72"
 blake3 = "1.4.1"
+clap = { version = "4.3.21", features = ["derive"] }
 filewalker = { path = "../filewalker"}
 
 [profile.release]
