@@ -61,7 +61,7 @@ pub struct DefaultFilter<'a> {
 
 impl DefaultFilter<'_> {
     pub fn new() -> Self {
-        let ext_set = DEFAULT_EXT_FILTER.iter().map(|x| OsStr::new(x)).collect::<Vec<_>>();
+        let ext_set = DEFAULT_EXT_FILTER.iter().map(OsStr::new).collect::<Vec<_>>();
         Self { ext: ext_set }
     }
 

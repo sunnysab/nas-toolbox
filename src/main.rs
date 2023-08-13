@@ -51,7 +51,7 @@ struct ScanArg {
 
 #[derive(Args)]
 struct DedupArg {
-    list: std::path::PathBuf,
+    list: PathBuf,
 }
 #[derive(Subcommand)]
 enum Commands {
