@@ -1,11 +1,23 @@
 use anyhow::{bail, Context, Result};
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
 
 use crate::hash::{checksum_file, MODE_HEAD_1M};
 use crate::metadata::{convert_metadata, FileMetadata};
 use filewalker::FileWalker;
+
+const DEFAULT_EXT_FILTER: [&str; 44] = [
+    "pdf", "mdx", "epub", "djvu", "xps", // Document
+    "class", "exe", "dll", "so", "bin", "apk", // Build craft
+    "zip", "rar", "7z", "iso", "tar", "tgz", "bak", // Archive
+    "mp3", "wav", "flac", "ape", "ogg", "aac", // Music
+    "mp4", "rm", "mkv", "avi", "mov", "wmv", "flv", "webm", "rmvb", "f4v", "mpg", "mpeg",
+    "ts", // Video
+    "jpg", "bmp", "jpeg", "gif", "png", "webp",
+    "tiff", // Picture. Note: Please not modify these pictures.
+];
 
 #[derive(Clone)]
 pub struct File {
@@ -32,6 +44,44 @@ impl TryFrom<DirEntry> for File {
 type FileExtension = u32;
 type FileSize = u64;
 type RecordIndex = usize;
+
+pub trait ScanFilter {
+    fn filter(&self, file: &File) -> bool;
+}
+
+pub struct NoFilter;
+
+impl ScanFilter for NoFilter {
+    fn filter(&self, _file: &File) -> bool {
+        true
+    }
+}
+
+pub struct DefaultFilter<'a> {
+    ext: Vec<&'a OsStr>,
+}
+
+impl DefaultFilter<'_> {
+    pub fn new() -> Self {
+        let ext_set = DEFAULT_EXT_FILTER
+            .iter()
+            .map(|x| OsStr::new(x))
+            .collect::<Vec<_>>();
+        Self { ext: ext_set }
+    }
+}
+impl ScanFilter for DefaultFilter<'_> {
+    fn filter(&self, file: &File) -> bool {
+        for predefined_ext in &self.ext {
+            if let Some(this_ext) = file.path.extension() {
+                if this_ext == *predefined_ext {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+}
 
 /// A file extension like ".pdf" normally consists of numbers and letters.
 /// I made a hash algorithm, mainly for extensions, generating integer hashes for them.
@@ -67,7 +117,7 @@ enum PreviousScanned {
 #[derive(Eq, PartialEq, Hash)]
 struct ClassifyingKey(FileExtension, FileSize);
 
-pub struct Duplicate<'a> {
+pub struct Duplicate<'a, F: ScanFilter = NoFilter> {
     path: PathBuf,
 
     records: Vec<File>,
@@ -79,15 +129,15 @@ pub struct Duplicate<'a> {
     /// file hash -> [2, 4, ...]
     hash2files: HashMap<blake3::Hash, Vec<RecordIndex>>,
 
-    custom_filter: Option<Box<dyn Fn(&File) -> bool>>,
+    filter: F,
 
     _marker: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a> Duplicate<'a> {
+impl<'a> Duplicate<'a, NoFilter> {
     const DEFAULT_SIZE: usize = 100_0000;
 
-    pub fn new<P: AsRef<Path>>(path: P) -> Duplicate<'a> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
         let path = path.as_ref().to_path_buf();
 
         Duplicate {
@@ -96,14 +146,31 @@ impl<'a> Duplicate<'a> {
             inode_set: HashSet::with_capacity(Self::DEFAULT_SIZE),
             set: HashMap::with_capacity(Self::DEFAULT_SIZE),
             hash2files: HashMap::with_capacity(Self::DEFAULT_SIZE),
-            custom_filter: None,
+            filter: NoFilter,
             _marker: Default::default(),
         }
     }
+}
 
-    pub fn custom_filter(mut self, filter: impl Fn(&File) -> bool + 'static) -> Self {
-        self.custom_filter = Some(Box::new(filter));
-        self
+impl<'a, F: ScanFilter> Duplicate<'a, F> {
+    pub fn custom_filter<G: ScanFilter>(self, filter: G) -> Duplicate<'a, G> {
+        let Duplicate {
+            path,
+            records,
+            inode_set,
+            set,
+            hash2files,
+            ..
+        } = self;
+        Duplicate {
+            path,
+            records,
+            inode_set,
+            set,
+            hash2files,
+            filter,
+            _marker: Default::default(),
+        }
     }
 
     fn append_record(&mut self, file: File) -> RecordIndex {
@@ -199,10 +266,8 @@ impl<'a> Duplicate<'a> {
 
         for item in walker {
             if let Ok(file) = File::try_from(item) {
-                if let Some(filter) = &self.custom_filter {
-                    if !filter(&file) {
-                        continue;
-                    }
+                if !self.filter.filter(&file) {
+                    continue;
                 }
 
                 let path = file.path.clone();
