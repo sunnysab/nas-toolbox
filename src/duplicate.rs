@@ -13,10 +13,8 @@ const DEFAULT_EXT_FILTER: [&str; 44] = [
     "class", "exe", "dll", "so", "bin", "apk", // Build craft
     "zip", "rar", "7z", "iso", "tar", "tgz", "bak", // Archive
     "mp3", "wav", "flac", "ape", "ogg", "aac", // Music
-    "mp4", "rm", "mkv", "avi", "mov", "wmv", "flv", "webm", "rmvb", "f4v", "mpg", "mpeg",
-    "ts", // Video
-    "jpg", "bmp", "jpeg", "gif", "png", "webp",
-    "tiff", // Picture. Note: Please not modify these pictures.
+    "mp4", "rm", "mkv", "avi", "mov", "wmv", "flv", "webm", "rmvb", "f4v", "mpg", "mpeg", "ts", // Video
+    "jpg", "bmp", "jpeg", "gif", "png", "webp", "tiff", // Picture. Note: Please not modify these pictures.
 ];
 
 #[derive(Clone)]
@@ -63,10 +61,7 @@ pub struct DefaultFilter<'a> {
 
 impl DefaultFilter<'_> {
     pub fn new() -> Self {
-        let ext_set = DEFAULT_EXT_FILTER
-            .iter()
-            .map(|x| OsStr::new(x))
-            .collect::<Vec<_>>();
+        let ext_set = DEFAULT_EXT_FILTER.iter().map(|x| OsStr::new(x)).collect::<Vec<_>>();
         Self { ext: ext_set }
     }
 

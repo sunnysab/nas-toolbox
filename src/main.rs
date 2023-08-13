@@ -79,8 +79,7 @@ fn report(duplicate: &Duplicate, output: &Path, format: OutputFormat) -> Result<
         unimplemented!()
     }
 
-    let script =
-        std::fs::File::create(output).with_context(|| format!("failed to open output file."))?;
+    let script = std::fs::File::create(output).with_context(|| format!("failed to open output file."))?;
     let mut buffer = BufWriter::new(script);
     writeln!(&mut buffer, "#/usr/bin/bash")?;
     writeln!(&mut buffer, "set -e")?;
@@ -100,20 +99,11 @@ fn report(duplicate: &Duplicate, output: &Path, format: OutputFormat) -> Result<
         )?;
 
         if let [first, rest @ ..] = file_group.as_slice() {
-            writeln!(
-                &mut buffer,
-                "# Keep {}: {}",
-                first.metadata.ino,
-                first.path.display()
-            )?;
+            writeln!(&mut buffer, "# Keep {}: {}", first.metadata.ino, first.path.display())?;
             let source = first.path.display();
             for &file_to_del in rest {
                 let destination = file_to_del.path.display();
-                writeln!(
-                    &mut buffer,
-                    "# Remove {}: {}",
-                    file_to_del.metadata.ino, destination
-                )?;
+                writeln!(&mut buffer, "# Remove {}: {}", file_to_del.metadata.ino, destination)?;
                 writeln!(&mut buffer, "ln -f '{source}' '{destination}'")?;
             }
         }
@@ -129,9 +119,7 @@ fn scan(arg: ScanArg) {
     let time = std::time::SystemTime::now();
     let instant = std::time::Instant::now();
     println!("Task started on {:?}", time);
-    duplicate
-        .discover()
-        .expect("Error occurred while discovering.");
+    duplicate.discover().expect("Error occurred while discovering.");
 
     let duration = instant.elapsed();
     println!("Discovering finished, {:.2}s elapsed.", duration.as_secs());
