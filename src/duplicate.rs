@@ -116,7 +116,7 @@ enum PreviousScanned {
 #[derive(Eq, PartialEq, Hash)]
 struct ClassifyingKey(FileExtension, FileSize);
 
-pub struct Duplicate<'a, F: ScanFilter = NoFilter> {
+pub struct Duplicate<'a, F: ScanFilter> {
     path: PathBuf,
 
     records: Vec<File>,

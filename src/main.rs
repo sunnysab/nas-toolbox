@@ -6,11 +6,13 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::io::BufWriter;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use crate::duplicate::ScanFilter;
 use duplicate::{DefaultFilter, Duplicate};
 
 const DEFAULT_COMPARE_SIZE: &str = "1M";
+const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::Script;
 
 #[derive(Parser)]
 #[command(name = "d2fn")]
@@ -33,7 +35,7 @@ enum OutputFormat {
 #[derive(Args)]
 struct ScanArg {
     /// The directory to scan
-    path: std::path::PathBuf,
+    path: PathBuf,
     /// Compare complete file content
     #[arg(long, default_value_t = false)]
     compare_full: bool,
@@ -41,10 +43,10 @@ struct ScanArg {
     #[arg(long, default_value_t = DEFAULT_COMPARE_SIZE.to_string())]
     compare_size: String,
     /// Output format
-    #[arg(value_enum)]
+    #[arg(value_enum, default_value_t = DEFAULT_OUTPUT_FORMAT)]
     format: OutputFormat,
     /// Output path
-    output: std::path::PathBuf,
+    output: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -74,12 +76,8 @@ fn display_file_size(len: u64) -> String {
     format!("{}{}", r, t[i])
 }
 
-fn report(duplicate: &Duplicate, output: &Path, format: OutputFormat) -> Result<()> {
-    if let OutputFormat::Html = format {
-        unimplemented!()
-    }
-
-    let script = std::fs::File::create(output).with_context(|| format!("failed to open output file."))?;
+fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path) -> Result<()> {
+    let script = std::fs::File::create(output).with_context(|| format!("failed to create {}.", output.display()))?;
     let mut buffer = BufWriter::new(script);
     writeln!(&mut buffer, "#/usr/bin/bash")?;
     writeln!(&mut buffer, "set -e")?;
@@ -111,6 +109,21 @@ fn report(duplicate: &Duplicate, output: &Path, format: OutputFormat) -> Result<
     Ok(())
 }
 
+fn report<F: ScanFilter>(duplicate: &Duplicate<F>, output: Option<PathBuf>, format: OutputFormat) -> Result<()> {
+    if let OutputFormat::Html = format {
+        unimplemented!()
+    }
+
+    match format {
+        OutputFormat::Html => {}
+        OutputFormat::Script => {
+            let path = output.unwrap_or_else(|| PathBuf::from("./dedup.sh"));
+            generate_dedup_script(duplicate, &path).expect("unable to generate script.");
+        }
+    }
+    Ok(())
+}
+
 fn scan(arg: ScanArg) {
     println!("Scanning on {}...", arg.path.display());
     println!("File type filter: {:?}", DefaultFilter::ext_set());
@@ -123,6 +136,8 @@ fn scan(arg: ScanArg) {
 
     let duration = instant.elapsed();
     println!("Discovering finished, {:.2}s elapsed.", duration.as_secs());
+
+    report(&duplicate, arg.output, arg.format).expect("report failed");
 }
 
 fn dedup() {}
