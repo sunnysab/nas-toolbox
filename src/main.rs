@@ -9,6 +9,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::duplicate::ScanFilter;
+use crate::hash::CompareMode;
 use duplicate::{DefaultFilter, Duplicate};
 
 const DEFAULT_COMPARE_SIZE: &str = "1M";
@@ -43,9 +44,10 @@ struct ScanArg {
     #[arg(long, default_value_t = DEFAULT_COMPARE_SIZE.to_string())]
     compare_size: String,
     /// Output format
-    #[arg(value_enum, default_value_t = DEFAULT_OUTPUT_FORMAT)]
+    #[arg(short, long, value_enum, default_value_t = DEFAULT_OUTPUT_FORMAT)]
     format: OutputFormat,
     /// Output path
+    #[arg(short, long)]
     output: Option<PathBuf>,
 }
 
@@ -76,6 +78,29 @@ fn display_file_size(len: u64) -> String {
     format!("{}{}", r, t[i])
 }
 
+/// Parse user input size "1G", "1GB", "1MB"... to a usize.
+fn parse_file_size(text: &str) -> usize {
+    let mut num = 0usize;
+    let mut last_i = 0usize;
+    for (i, c) in text.char_indices() {
+        if c.is_ascii_digit() {
+            num = num * 10 + (c as usize) - 48;
+        } else {
+            last_i = i;
+            break;
+        }
+    }
+
+    let unit = text[last_i..].to_lowercase();
+    let unit = match unit.as_str() {
+        "g" | "gb" => 1024 * 1024 * 1024usize,
+        "m" | "mb" => 1024 * 1024usize,
+        "k" | "kb" => 1024usize,
+        _ => panic!("unexpected size {unit}"),
+    };
+    num * unit
+}
+
 fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path) -> Result<()> {
     let script = std::fs::File::create(output).with_context(|| format!("failed to create {}.", output.display()))?;
     let mut buffer = BufWriter::new(script);
@@ -103,6 +128,7 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
                 let destination = file_to_del.path.display();
                 writeln!(&mut buffer, "# Remove {}: {}", file_to_del.metadata.ino, destination)?;
                 writeln!(&mut buffer, "ln -f '{source}' '{destination}'")?;
+                writeln!(&mut buffer)?;
             }
         }
     }
@@ -129,10 +155,17 @@ fn scan(arg: ScanArg) {
     println!("File type filter: {:?}", DefaultFilter::ext_set());
     let mut duplicate = Duplicate::new(&arg.path).custom_filter(DefaultFilter::new());
 
-    let time = std::time::SystemTime::now();
+    let compare_mode = match (arg.compare_full, arg.compare_size) {
+        (true, _) => CompareMode::Full,
+        (_, size_str) => {
+            let size_value = parse_file_size(&size_str);
+            CompareMode::Part(size_value)
+        }
+    };
+    let time = time::OffsetDateTime::now_local().unwrap();
     let instant = std::time::Instant::now();
-    println!("Task started on {:?}", time);
-    duplicate.discover().expect("Error occurred while discovering.");
+    println!("Task started on {time}");
+    duplicate.discover(compare_mode).expect("Error occurred while discovering.");
 
     let duration = instant.elapsed();
     println!("Discovering finished, {:.2}s elapsed.", duration.as_secs());

@@ -6,8 +6,7 @@ use std::io::Read;
 use anyhow::Result;
 use std::path::Path;
 
-pub const MODE_HEAD_1M: CompareMode = CompareMode::Part(1024 * 1024);
-
+#[derive(Clone, Copy)]
 pub enum CompareMode {
     Full,
     Part(usize),
