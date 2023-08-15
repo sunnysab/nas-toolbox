@@ -7,6 +7,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use unicode_width::UnicodeWidthChar;
 
 use crate::duplicate::{ScanFilter, StatusReport};
 use crate::hash::CompareMode;
@@ -168,12 +169,12 @@ fn print_progress(status: StatusReport, width: usize) {
     fn get_truncated_content(text: &str, mut remaining_width: usize) -> &str {
         let mut len = 0usize;
         for ch in text.chars() {
-            let ch_width = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
+            let ch_width = ch.width().unwrap_or(0);
             if ch_width > remaining_width {
                 break;
             } else {
                 remaining_width -= ch_width;
-                len += ch_width;
+                len += ch.len_utf8();
             }
         }
         &text[..len]
