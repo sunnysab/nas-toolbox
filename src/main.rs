@@ -38,9 +38,9 @@ enum OutputFormat {
 struct ScanArg {
     /// The directory to scan
     path: PathBuf,
-    /// Compare complete file content
-    #[arg(long, default_value_t = false)]
-    compare_full: bool,
+    /// Verify the full content to file
+    #[arg(long, default_value_t = true)]
+    verify: bool,
     /// Compare size
     #[arg(long, default_value_t = DEFAULT_COMPARE_SIZE.to_string())]
     compare_size: String,
@@ -159,6 +159,8 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
         display_file_size(total_size_across_group),
         display_file_size(block_size_across_group)
     );
+    println!("Script has been written to {}", output.display());
+    println!("Remember to grant execute permission before you run it.");
     Ok(())
 }
 
@@ -207,14 +209,6 @@ fn scan(arg: ScanArg) {
     println!("File type filter: {:?}", DefaultFilter::ext_set());
     let mut duplicate = Duplicate::new(&arg.path).custom_filter(DefaultFilter::new());
 
-    let compare_mode = match (arg.compare_full, arg.compare_size) {
-        (true, _) => CompareMode::Full,
-        (_, size_str) => {
-            let size_value = parse_file_size(&size_str);
-            CompareMode::Part(size_value)
-        }
-    };
-
     let rx = duplicate.enable_status_channel(30);
     std::thread::spawn(move || {
         let start = Instant::now();
@@ -233,11 +227,19 @@ fn scan(arg: ScanArg) {
         }
     });
 
+    let compare_size = parse_file_size(&arg.compare_size);
     let instant = Instant::now();
-    duplicate.discover(compare_mode).expect("Error occurred while discovering.");
+    duplicate.discover(compare_size).expect("Error occurred while discovering.");
     let duration = instant.elapsed();
     println!("\nDiscovering finished, {}s elapsed.", duration.as_secs());
 
+    if arg.verify {
+        println!("Try to verify duplicate list, this operation may take a while...");
+        let instant = Instant::now();
+        let conflict_count = duplicate.verify().expect("Error occurred while verifying.");
+        let duration = instant.elapsed();
+        println!("{conflict_count} conflicts detected, costs {}s.", duration.as_secs());
+    }
     report(&duplicate, arg.output, arg.format).expect("report failed");
 }
 

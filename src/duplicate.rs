@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 
+use blake3::Hash;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::DirEntry;
@@ -131,6 +132,7 @@ pub struct Duplicate<'a, F: ScanFilter> {
     set: HashMap<ClassifyingKey, PreviousScanned>,
     /// file hash -> [2, 4, ...]
     hash2files: HashMap<blake3::Hash, Vec<RecordIndex>>,
+    full_hash2files: HashMap<blake3::Hash, Vec<RecordIndex>>,
 
     filter: F,
 
@@ -161,6 +163,7 @@ impl<'a> Duplicate<'a, NoFilter> {
             inode_set: HashSet::with_capacity(Self::DEFAULT_SIZE),
             set: HashMap::with_capacity(Self::DEFAULT_SIZE),
             hash2files: HashMap::with_capacity(Self::DEFAULT_SIZE),
+            full_hash2files: HashMap::new(),
             filter: NoFilter,
             status_channel: None,
             status_report_step: usize::MAX,
@@ -187,6 +190,7 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
             set,
             hash2files,
             filter,
+            full_hash2files: HashMap::new(),
             status_channel: None,
             status_report_step: 0,
             status: Default::default(),
@@ -211,7 +215,7 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
         index
     }
 
-    fn push(&mut self, file: File, compare: CompareMode) -> Result<()> {
+    fn push(&mut self, file: File, compare_size: usize) -> Result<()> {
         let ino = file.metadata.ino;
         let path = file.path.clone();
         let extension = ext_hash(&file.path);
@@ -232,12 +236,12 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
         if let Some(previous_result) = self.set.get_mut(&key) {
             // 存在与当前文件相同扩展名和大小的文件，且 inode 不同.
             // 需要通过哈希值进行最终的判断
-            let hash = checksum_file(path, compare)?;
+            let hash = checksum_file(path, CompareMode::Part(compare_size))?;
             // 这里使用了 PreviousScanned 结构. 由于估计存在大量非重复文件, 对于第一次出现满足某个 (ext, size)
             // 组合的文件只记录其下标, 等到第二次遇到该组合时再计算其哈希值, 以减少计算量
             if let PreviousScanned::Index(previous_index) = previous_result {
                 let previous_file = &self.records[*previous_index];
-                let previous_hash = checksum_file(&previous_file.path, compare)?;
+                let previous_hash = checksum_file(&previous_file.path, CompareMode::Part(compare_size))?;
 
                 let mut set_of_file_hash_in_ext_size = HashSet::new();
                 set_of_file_hash_in_ext_size.insert(previous_hash);
@@ -283,13 +287,22 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
     }
 
     pub fn result(&'a self) -> impl Iterator<Item = Vec<&'a File>> {
-        self.hash2files
+        let group_set1 = self
+            .hash2files
             .iter()
             .filter(|(_, v)| v.len() > 1)
-            .map(|(_, record_vec)| self.map_record_vec(record_vec))
+            .map(|(_, record_vec)| self.map_record_vec(record_vec));
+
+        let group_set2 = self
+            .full_hash2files
+            .iter()
+            .filter(|(_, v)| v.len() > 1)
+            .map(|(_, record_vec)| self.map_record_vec(record_vec));
+
+        group_set1.chain(group_set2)
     }
 
-    pub fn discover(&mut self, compare: CompareMode) -> Result<()> {
+    pub fn discover(&mut self, compare_size: usize) -> Result<()> {
         let walker = FileWalker::open(&self.path)
             .with_context(|| format!("failed to read start directory: {}", self.path.display()))?
             .file_only(true)
@@ -316,11 +329,52 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
                     continue;
                 }
 
-                if let Err(e) = self.push(file, compare) {
+                if let Err(e) = self.push(file, compare_size) {
                     eprintln!("unable to add {}: {}", path.display(), e);
                 }
             };
         }
         Ok(())
+    }
+
+    pub fn verify(&mut self) -> Result<usize> {
+        let mut conflict_count = 0usize;
+
+        for (_, vec) in self.hash2files.iter_mut() {
+            if vec.len() == 1 {
+                continue;
+            }
+
+            // vec 是一个文件下标集合, 现在需要找到对应的 File 结构, 并计算其文件哈希值.
+            // 按计算结果, 验证文件是否重复.
+            let mut full_checksum_map: HashMap<Hash, Vec<RecordIndex>> = HashMap::new();
+            for i in vec.iter() {
+                let file = &self.records[*i];
+                let full_checksum =
+                    checksum_file(&file.path, CompareMode::Full).with_context(|| format!("read {}", file.path.display()))?;
+
+                if let Some(same_checksum_files) = full_checksum_map.get_mut(&full_checksum) {
+                    same_checksum_files.push(*i);
+                } else {
+                    full_checksum_map.insert(full_checksum, vec![*i]);
+                }
+            }
+
+            // 如果真的出现了：前 compare_size 大小相同, 但完整的文件不同的情况（针对存档文件少见）
+            // 注意，这里不考虑哈希碰撞，即：默认只有部分哈希相同，完整的哈希才有可能相同.
+            if full_checksum_map.len() > 1 {
+                vec.clear();
+                conflict_count += full_checksum_map.len();
+
+                for (full_checksum, mut array) in full_checksum_map.into_iter() {
+                    if let Some(old_array) = self.full_hash2files.get_mut(&full_checksum) {
+                        old_array.append(&mut array);
+                    } else {
+                        self.full_hash2files.insert(full_checksum, array);
+                    }
+                }
+            }
+        }
+        Ok(conflict_count)
     }
 }
