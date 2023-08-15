@@ -200,7 +200,7 @@ fn scan(arg: ScanArg) {
         }
     };
 
-    let rx = duplicate.enable_status_channel(200);
+    let rx = duplicate.enable_status_channel(30);
     std::thread::spawn(move || {
         let start = Instant::now();
         let mut delta_milli_sec = 0;
