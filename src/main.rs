@@ -227,7 +227,7 @@ fn scan(arg: ScanArg) {
         // 当 scan 函数结束后, channel 会关闭, 由此子线程 recv 也会关闭.
         while let Ok(status) = rx.recv() {
             if start.elapsed().as_millis() > delta_milli_sec {
-                //print_progress(status, width as usize);
+                print_progress(status, width as usize);
                 delta_milli_sec += 250; // 平均一秒最多刷新 4 次.
             }
         }

@@ -46,6 +46,5 @@ pub fn checksum_file<P: AsRef<Path>>(path: P, mode: CompareMode) -> Result<blake
     }
 
     let result = hasher.finalize();
-    println!("{} - {}", result.to_string(), path.as_ref().to_string_lossy());
     Ok(result)
 }
