@@ -56,10 +56,25 @@ struct ScanArg {
 struct DedupArg {
     list: PathBuf,
 }
+
+#[derive(Args)]
+struct HashArg {
+    /// The file to hash
+    file: String,
+
+    /// Compare complete file content
+    #[arg(long, default_value_t = false)]
+    full: bool,
+    /// Compare size
+    #[arg(long, default_value_t = DEFAULT_COMPARE_SIZE.to_string())]
+    hash_size: String,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     Scan(ScanArg),
     Dedup(DedupArg),
+    Hash(HashArg),
 }
 
 fn display_file_size(len: u64) -> String {
@@ -212,7 +227,7 @@ fn scan(arg: ScanArg) {
         // 当 scan 函数结束后, channel 会关闭, 由此子线程 recv 也会关闭.
         while let Ok(status) = rx.recv() {
             if start.elapsed().as_millis() > delta_milli_sec {
-                print_progress(status, width as usize);
+                //print_progress(status, width as usize);
                 delta_milli_sec += 250; // 平均一秒最多刷新 4 次.
             }
         }
@@ -228,11 +243,25 @@ fn scan(arg: ScanArg) {
 
 fn dedup() {}
 
+fn hash(arg: HashArg) {
+    let hash_mode = match (arg.full, arg.hash_size) {
+        (true, _) => CompareMode::Full,
+        (_, size_str) => {
+            let size_value = parse_file_size(&size_str);
+            CompareMode::Part(size_value)
+        }
+    };
+
+    let checksum = hash::checksum_file(arg.file, hash_mode).expect("failed on hash::checksum_file.");
+    println!("{}", checksum.to_string());
+}
+
 fn main() {
     let args = Cli::parse();
 
     match args.command {
         Commands::Scan(arg) => scan(arg),
         Commands::Dedup(_arg) => {}
+        Commands::Hash(arg) => hash(arg),
     }
 }
