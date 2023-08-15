@@ -30,7 +30,8 @@ pub fn checksum_file<P: AsRef<Path>>(path: P, mode: CompareMode) -> Result<blake
     // 2. 文件是常规文件, 不存在 file hole.
     // 这个假设很重要, 因为它避免了两个不同的文件计算出同一哈希值
     // 由于不知道文件大小, 因此读完 expected size 或读取出现 len == 0 后停止.
-    while let Ok(len) = file.read(&mut buffer) {
+    loop {
+        let len = file.read(&mut buffer)?;
         if len == 0 {
             break;
         }
@@ -38,11 +39,13 @@ pub fn checksum_file<P: AsRef<Path>>(path: P, mode: CompareMode) -> Result<blake
         hasher.update(&buffer[..current_hash_len]);
         hashed_size += len;
 
-        if hashed_size == compare_size {
+        // 这里, 实际计算哈希的长度可能比预期大一点, 不过没关系.
+        if hashed_size >= compare_size {
             break;
         }
     }
 
     let result = hasher.finalize();
+    println!("{} - {}", result.to_string(), path.as_ref().to_string_lossy());
     Ok(result)
 }
