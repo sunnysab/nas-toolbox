@@ -4,10 +4,8 @@ mod metadata;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use std::io::BufWriter;
-use std::io::Write;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
-use std::thread;
 use std::time::Instant;
 
 use crate::duplicate::{ScanFilter, StatusReport};
@@ -111,6 +109,8 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
     writeln!(&mut buffer)?;
 
     let mut count = 0;
+    let mut total_size_across_group = 0;
+    let mut block_size_across_group = 0;
     for file_group in duplicate.result() {
         count += 1;
 
@@ -133,7 +133,16 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
                 writeln!(&mut buffer)?;
             }
         }
+
+        total_size_across_group += file_group[0].metadata.size * del_count;
+        block_size_across_group += file_group[0].metadata.blocks * 512 * del_count;
     }
+
+    println!(
+        "{} files ({} on disk) can be cleaned.",
+        display_file_size(total_size_across_group),
+        display_file_size(block_size_across_group)
+    );
     Ok(())
 }
 
@@ -191,7 +200,7 @@ fn scan(arg: ScanArg) {
     };
 
     let rx = duplicate.enable_status_channel(200);
-    thread::spawn(move || {
+    std::thread::spawn(move || {
         let start = Instant::now();
         let mut delta_milli_sec = 0;
 
