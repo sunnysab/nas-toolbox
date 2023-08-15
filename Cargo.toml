@@ -10,7 +10,8 @@ anyhow = "1.0.72"
 blake3 = "1.4.1"
 clap = { version = "4.3.21", features = ["derive"] }
 filewalker = { path = "../filewalker"}
-time = { version = "0.3.21", features = ["local-offset"] }
+terminal_size = "0.2.6"
+unicode-width = "0.1.10"
 
 [profile.release]
 lto = "fat"

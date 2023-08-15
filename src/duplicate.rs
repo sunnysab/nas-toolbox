@@ -1,8 +1,11 @@
 use anyhow::{bail, Context, Result};
+
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{mpsc};
 
 use crate::hash::{checksum_file, CompareMode};
 use crate::metadata::{convert_metadata, FileMetadata};
@@ -131,7 +134,19 @@ pub struct Duplicate<'a, F: ScanFilter> {
 
     filter: F,
 
+    status_channel: Option<Sender<StatusReport>>,
+    status_report_step: usize,
+    status: StatusReport,
+
     _marker: std::marker::PhantomData<&'a ()>,
+}
+
+#[derive(Default)]
+pub struct StatusReport {
+    pub scanned: usize,
+    pub duplicated: usize,
+
+    pub last_file: String,
 }
 
 impl<'a> Duplicate<'a, NoFilter> {
@@ -147,6 +162,9 @@ impl<'a> Duplicate<'a, NoFilter> {
             set: HashMap::with_capacity(Self::DEFAULT_SIZE),
             hash2files: HashMap::with_capacity(Self::DEFAULT_SIZE),
             filter: NoFilter,
+            status_channel: None,
+            status_report_step: usize::MAX,
+            status: Default::default(),
             _marker: Default::default(),
         }
     }
@@ -169,8 +187,21 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
             set,
             hash2files,
             filter,
+            status_channel: None,
+            status_report_step: 0,
+            status: Default::default(),
             _marker: Default::default(),
         }
+    }
+
+    pub fn enable_status_channel(&mut self, step: usize) -> Receiver<StatusReport> {
+        assert!(step > 0);
+
+        self.status_report_step = step;
+
+        let (tx, rx) = mpsc::channel();
+        self.status_channel = Some(tx);
+        rx
     }
 
     fn append_record(&mut self, file: File) -> RecordIndex {
@@ -228,6 +259,7 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
                 // 在 hash2files 里记录一下
                 if let Some(duplicate_file_list) = self.hash2files.get_mut(&hash) {
                     duplicate_file_list.push(index);
+                    self.status.duplicated += 1;
                 } else {
                     self.hash2files.insert(hash, vec![index]);
                 }
@@ -266,11 +298,24 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
 
         for item in walker {
             if let Ok(file) = File::try_from(item) {
+                let path = file.path.clone();
+                self.status.scanned += 1;
+                // 报告当前扫描进度
+                if self.status_channel.is_some() && self.status.scanned % self.status_report_step == 0 {
+                    if let Some(channel) = &self.status_channel {
+                        let path = path.to_string_lossy().to_string();
+                        let report = StatusReport {
+                            last_file: path,
+                            ..self.status
+                        };
+                        let _ = channel.send(report);
+                    }
+                }
+
                 if !self.filter.filter(&file) {
                     continue;
                 }
 
-                let path = file.path.clone();
                 if let Err(e) = self.push(file, compare) {
                     eprintln!("unable to add {}: {}", path.display(), e);
                 }

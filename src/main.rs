@@ -7,8 +7,10 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Instant;
 
-use crate::duplicate::ScanFilter;
+use crate::duplicate::{ScanFilter, StatusReport};
 use crate::hash::CompareMode;
 use duplicate::{DefaultFilter, Duplicate};
 
@@ -150,6 +152,31 @@ fn report<F: ScanFilter>(duplicate: &Duplicate<F>, output: Option<PathBuf>, form
     Ok(())
 }
 
+fn print_progress(status: StatusReport, width: usize) {
+    let blank_line = " ".repeat(width);
+    let clear_line = || print!("\r{blank_line}\r");
+
+    fn get_truncated_content(text: &str, mut remaining_width: usize) -> &str {
+        let mut len = 0usize;
+        for ch in text.chars() {
+            let ch_width = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
+            if ch_width > remaining_width {
+                break;
+            } else {
+                remaining_width -= ch_width;
+                len += ch_width;
+            }
+        }
+        &text[..len]
+    }
+
+    clear_line();
+    let count = format!("S {}/D {}: ", status.scanned, status.duplicated);
+    print!("{count}{}", get_truncated_content(&status.last_file, width - count.len()));
+
+    std::io::stdout().flush().unwrap();
+}
+
 fn scan(arg: ScanArg) {
     println!("Scanning on {}...", arg.path.display());
     println!("File type filter: {:?}", DefaultFilter::ext_set());
@@ -162,26 +189,40 @@ fn scan(arg: ScanArg) {
             CompareMode::Part(size_value)
         }
     };
-    let time = time::OffsetDateTime::now_local().unwrap();
-    let instant = std::time::Instant::now();
-    println!("Task started on {time}");
-    duplicate.discover(compare_mode).expect("Error occurred while discovering.");
 
+    let rx = duplicate.enable_status_channel(200);
+    thread::spawn(move || {
+        let start = Instant::now();
+        let mut delta_milli_sec = 0;
+
+        let (terminal_size::Width(width), _) =
+            terminal_size::terminal_size().unwrap_or((terminal_size::Width(80), terminal_size::Height(25)));
+
+        println!("S = Scanned files, D = Duplicates");
+        // 当 scan 函数结束后, channel 会关闭, 由此子线程 recv 也会关闭.
+        while let Ok(status) = rx.recv() {
+            if start.elapsed().as_millis() > delta_milli_sec {
+                print_progress(status, width as usize);
+                delta_milli_sec += 250; // 平均一秒最多刷新 4 次.
+            }
+        }
+    });
+
+    let instant = Instant::now();
+    duplicate.discover(compare_mode).expect("Error occurred while discovering.");
     let duration = instant.elapsed();
-    println!("Discovering finished, {:.2}s elapsed.", duration.as_secs());
+    println!("\nDiscovering finished, {}s elapsed.", duration.as_secs());
 
     report(&duplicate, arg.output, arg.format).expect("report failed");
 }
 
 fn dedup() {}
 
-fn main() -> Result<()> {
+fn main() {
     let args = Cli::parse();
 
     match args.command {
         Commands::Scan(arg) => scan(arg),
-        Commands::Dedup(arg) => {}
+        Commands::Dedup(_arg) => {}
     }
-
-    Ok(())
 }
