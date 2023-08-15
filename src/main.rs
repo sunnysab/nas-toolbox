@@ -83,7 +83,7 @@ fn display_file_size(len: u64) -> String {
     let t = ["GB", "MB", "KB", "Byte"];
 
     if len == 0 {
-        return String::new();
+        return "0B".to_string();
     }
     let mut i: usize = 0;
     while r == 0 {
