@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::{mpsc};
 
 use crate::hash::{checksum_file, CompareMode};
 use crate::metadata::{convert_metadata, FileMetadata};
@@ -236,8 +236,8 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
             // 这里使用了 PreviousScanned 结构. 由于估计存在大量非重复文件, 对于第一次出现满足某个 (ext, size)
             // 组合的文件只记录其下标, 等到第二次遇到该组合时再计算其哈希值, 以减少计算量
             if let PreviousScanned::Index(previous_index) = previous_result {
-                let file = &self.records[*previous_index];
-                let previous_hash = checksum_file(&file.path, compare)?;
+                let previous_file = &self.records[*previous_index];
+                let previous_hash = checksum_file(&previous_file.path, compare)?;
 
                 let mut set_of_file_hash_in_ext_size = HashSet::new();
                 set_of_file_hash_in_ext_size.insert(previous_hash);
@@ -247,7 +247,7 @@ impl<'a, F: ScanFilter> Duplicate<'a, F> {
 
                 // 把之前扫描中遇到的这个文件, 它的哈希值不存在于 hash2files 中, 可以加进去
                 // 这可能导致最终结果里 hash2files 出现一些 value.len() == 1 的键值对, 滤去即可
-                self.hash2files.insert(hash, vec![i]);
+                self.hash2files.insert(previous_hash, vec![i]);
             }
 
             // 现在 PreviousScanned 一定记录了一个哈希值的集合
