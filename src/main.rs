@@ -77,6 +77,22 @@ enum Commands {
     Hash(HashArg),
 }
 
+fn display_duration(secs: u64) -> String {
+    let (hour, min, sec) = (secs % (24 * 3600) / 60, secs % 3600 / 60, secs % 60);
+    let mut result = String::new();
+
+    if hour != 0 {
+        result.push_str(&format!("{hour}h"));
+    }
+    if min != 0 {
+        result.push_str(&format!("{min}h"));
+    }
+    if sec > 0 || result.is_empty() {
+        result.push_str(&format!("{sec}s"));
+    }
+    result
+}
+
 fn display_file_size(len: u64) -> String {
     let mut n: u64 = 1024 * 1024 * 1024;
     let mut r = len / n;
@@ -231,14 +247,17 @@ fn scan(arg: ScanArg) {
     let instant = Instant::now();
     duplicate.discover(compare_size).expect("Error occurred while discovering.");
     let duration = instant.elapsed();
-    println!("\nDiscovering finished, {}s elapsed.", duration.as_secs());
+    println!("\nDiscovering finished, {} elapsed.", display_duration(duration.as_secs()));
 
     if arg.verify {
         println!("Try to verify duplicate list, this operation may take a while...");
         let instant = Instant::now();
         let conflict_count = duplicate.verify().expect("Error occurred while verifying.");
         let duration = instant.elapsed();
-        println!("{conflict_count} conflicts detected, costs {}s.", duration.as_secs());
+        println!(
+            "{conflict_count} conflicts detected, costs {}.",
+            display_duration(duration.as_secs())
+        );
     }
     report(&duplicate, arg.output, arg.format).expect("report failed");
 }
