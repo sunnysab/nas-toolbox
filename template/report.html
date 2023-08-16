@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>扫描结果: {{ path }}</title>
+
+    <style>
+        .container {
+            max-width: max(75%, 900px);
+            margin: 0 auto;
+        }
+
+        .summary {
+
+        }
+
+        .details {
+
+        }
+
+        .detail-header {
+            font-size: 1.1em;
+        }
+
+        tr.detail-header + tr {
+            font-weight: bold;
+            background-color: aliceblue;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="summary">
+            <h1># {{ group_count }}</h1><br>
+            <h3>扫描模式：{{ parameter }}</h3>
+        </div>
+        <div class="details">
+            <table>
+                {% for group in groups %}
+                <tr class="detail-header">
+                    <td># {{ group.index }}</td>
+                </tr>
+                {% for file in group.files %}
+                <tr>
+                    <td>{{ file.ino }}</td>
+                    <td>{{ file.path }}</td>
+                    <td>{{ file.size }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</body>
+</html>

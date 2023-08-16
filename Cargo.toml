@@ -10,6 +10,8 @@ anyhow = "1.0.72"
 blake3 = "1.4.1"
 clap = { version = "4.3.21", features = ["derive"] }
 filewalker = { path = "../filewalker"}
+serde = { version = "1.0.163", features = ["derive"] }
+tera = { version = "1.19.0", default-features = false }
 terminal_size = "0.2.6"
 unicode-width = "0.1.10"
 

@@ -185,15 +185,67 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
     Ok(())
 }
 
-fn report<F: ScanFilter>(duplicate: &Duplicate<F>, output: Option<PathBuf>, format: OutputFormat) -> Result<()> {
-    if let OutputFormat::Html = format {
-        unimplemented!()
+fn generate_html<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path, scan: &ScanArg) -> Result<()> {
+    let mut html = std::fs::File::create(output).with_context(|| format!("failed to create {}.", output.display()))?;
+    let html_template: &'static str = include_str!("../template/report.html");
+
+    #[derive(serde::Serialize)]
+    struct FileSummary {
+        ino: u64,
+        path: String,
+        size: String,
     }
 
-    match format {
-        OutputFormat::Html => {}
+    #[derive(serde::Serialize)]
+    struct Group {
+        index: usize,
+        files: Vec<FileSummary>,
+    }
+    let mut mapped_groups = Vec::new();
+    for (group_index, group) in duplicate.result().enumerate() {
+        let files = group
+            .into_iter()
+            .map(|file_ref| {
+                let path = file_ref.path.strip_prefix(&scan.path).unwrap_or(&file_ref.path);
+                FileSummary {
+                    ino: file_ref.metadata.ino,
+                    path: path.to_string_lossy().to_string(),
+                    size: display_file_size(file_ref.metadata.size),
+                }
+            })
+            .collect::<Vec<_>>();
+        mapped_groups.push(Group {
+            index: group_index + 1,
+            files,
+        });
+    }
+
+    let mut context = tera::Context::new();
+    context.insert("path", &scan.path.to_string_lossy().to_string());
+    context.insert("group_count", &mapped_groups.len());
+    context.insert("groups", &mapped_groups);
+    let parameter = if scan.verify {
+        "部分 + 完整内容验证".to_string()
+    } else {
+        format!("仅比较前 {}", scan.compare_size)
+    };
+    context.insert("parameter", &parameter);
+
+    let content = tera::Tera::one_off(html_template, &context, false).with_context(|| format!("unable to render html"))?;
+    html.write_all(content.as_bytes())
+        .with_context(|| format!("when write to file"))?;
+    println!("Report has been written to {}.", output.display());
+    Ok(())
+}
+
+fn report<F: ScanFilter>(duplicate: &Duplicate<F>, arg: &ScanArg) -> Result<()> {
+    match arg.format {
+        OutputFormat::Html => {
+            let path = arg.output.clone().unwrap_or_else(|| PathBuf::from("./report.html"));
+            generate_html(duplicate, &path, &arg).expect("unable to generate report page.");
+        }
         OutputFormat::Script => {
-            let path = output.unwrap_or_else(|| PathBuf::from("./dedup.sh"));
+            let path = arg.output.clone().unwrap_or_else(|| PathBuf::from("./dedup.sh"));
             generate_dedup_script(duplicate, &path).expect("unable to generate script.");
         }
     }
@@ -255,7 +307,7 @@ fn scan(arg: ScanArg) {
     println!("\nDiscovering finished, {} elapsed.", display_duration(duration.as_secs()));
 
     if arg.verify {
-        println!("Try to verify duplicate list, this operation may take a while...");
+        println!("Trying to verify duplicate list, which may take a while...");
         let instant = Instant::now();
         let conflict_count = duplicate.verify().expect("Error occurred while verifying.");
         let duration = instant.elapsed();
@@ -264,7 +316,7 @@ fn scan(arg: ScanArg) {
             display_duration(duration.as_secs())
         );
     }
-    report(&duplicate, arg.output, arg.format).expect("report failed");
+    report(&duplicate, &arg).expect("report failed");
 }
 
 fn dedup() {}
