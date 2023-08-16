@@ -140,11 +140,11 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
     writeln!(&mut buffer, "set -e")?;
     writeln!(&mut buffer)?;
 
-    let mut count = 0;
+    let (mut group, mut dup_count) = (0, 0);
     let mut total_size_across_group = 0;
     let mut block_size_across_group = 0;
     for file_group in duplicate.result() {
-        count += 1;
+        group += 1;
 
         let del_count = file_group.len() as u64 - 1;
         let size = display_file_size(file_group[0].metadata.size);
@@ -152,7 +152,7 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
         let occupied = display_file_size(file_group[0].metadata.blocks * 512 * del_count);
         writeln!(
             &mut buffer,
-            "# group {count}, {del_count} * {size} = {total_size} ({occupied} in disk) can be saved."
+            "# group {group}, {del_count} * {size} = {total_size} ({occupied} in disk) can be saved."
         )?;
 
         if let [first, rest @ ..] = file_group.as_slice() {
@@ -163,6 +163,11 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
                 writeln!(&mut buffer, "# Remove {}: {}", file_to_del.metadata.ino, destination)?;
                 writeln!(&mut buffer, "ln -f '{source}' '{destination}'")?;
                 writeln!(&mut buffer)?;
+                dup_count += 1;
+
+                if dup_count % 50 == 0 {
+                    writeln!(&mut buffer, "echo -n -e '{dup_count}'")?;
+                }
             }
         }
 
