@@ -82,14 +82,14 @@ enum Commands {
 }
 
 fn display_duration(secs: u64) -> String {
-    let (hour, min, sec) = (secs % (24 * 3600) / 60, secs % 3600 / 60, secs % 60);
+    let (hour, min, sec) = (secs / 3600, secs % 3600 / 60, secs % 60);
     let mut result = String::new();
 
     if hour != 0 {
         result.push_str(&format!("{hour}h"));
     }
     if min != 0 {
-        result.push_str(&format!("{min}h"));
+        result.push_str(&format!("{min}m"));
     }
     if sec > 0 || result.is_empty() {
         result.push_str(&format!("{sec}s"));
