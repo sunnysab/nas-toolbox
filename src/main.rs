@@ -43,7 +43,7 @@ struct ScanArg {
     /// The directory to scan
     path: PathBuf,
     /// Verify the full content to file
-    #[arg(long, default_value_t = true)]
+    #[arg(long, default_value_t = false)]
     verify: bool,
     /// Compare size
     #[arg(long, default_value_t = DEFAULT_COMPARE_SIZE.to_string())]
