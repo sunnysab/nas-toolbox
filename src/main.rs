@@ -238,9 +238,10 @@ fn generate_html<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path, scan: &
     };
     context.insert("parameter", &parameter);
 
-    let content = tera::Tera::one_off(html_template, &context, false).with_context(|| format!("unable to render html"))?;
+    let content =
+        tera::Tera::one_off(html_template, &context, false).with_context(|| "unable to render html".to_string())?;
     html.write_all(content.as_bytes())
-        .with_context(|| format!("when write to file"))?;
+        .with_context(|| "when write to file".to_string())?;
     println!("Report has been written to {}.", output.display());
 
     let inventory_path = Path::new("inventory.d2fn");
@@ -275,7 +276,7 @@ fn report<F: ScanFilter>(duplicate: &Duplicate<F>, arg: &ScanArg) -> Result<()> 
     match arg.format {
         OutputFormat::Html => {
             let path = path.unwrap_or_else(|| PathBuf::from("report.html"));
-            generate_html(duplicate, &path, &arg).expect("unable to generate report page.");
+            generate_html(duplicate, &path, arg).expect("unable to generate report page.");
         }
         OutputFormat::Script => {
             let path = path.unwrap_or_else(|| PathBuf::from("dedup.sh"));
@@ -393,7 +394,7 @@ fn hash(arg: HashArg) {
     };
 
     let checksum = hash::checksum_file(arg.file, hash_mode).expect("failed on hash::checksum_file.");
-    println!("{}", checksum.to_string());
+    println!("{checksum}");
 }
 
 fn main() {

@@ -42,7 +42,7 @@ impl InventoryReader {
         let mut reader = BufReader::new(file);
 
         let header = bincode::decode_from_reader(&mut reader, bincode::config::standard())
-            .with_context(|| format!("reading header."))?;
+            .with_context(|| "reading header.".to_string())?;
         Ok(Self {
             reader,
             header,
