@@ -10,7 +10,7 @@ anyhow = "1.0.72"
 bincode = "2.0.0-rc.3"
 blake3 = "1.4.1"
 clap = { version = "4.3.21", features = ["derive"] }
-filewalker = { path = "../filewalker"}
+filewalker = { git = "https://gitee.com/sunnysab/filewalker.git"}
 serde = { version = "1.0.163", features = ["derive"] }
 tera = { version = "1.19.0", default-features = false }
 terminal_size = "0.2.6"
