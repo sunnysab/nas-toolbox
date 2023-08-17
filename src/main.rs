@@ -376,7 +376,8 @@ fn dedup(arg: DedupArg) {
             for dup in rest {
                 let destination = &dup.path;
 
-                if let Err(e) = std::fs::hard_link(source, destination) {
+                let result = std::fs::remove_file(destination).and_then(|_| std::fs::hard_link(source, destination));
+                if let Err(e) = result {
                     eprintln!("failed on {} :{e}", dup.ino);
                 }
             }
