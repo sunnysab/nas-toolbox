@@ -170,7 +170,7 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
                 dup_count += 1;
 
                 if dup_count % 50 == 0 {
-                    writeln!(&mut buffer, "echo -n -e '{dup_count}'")?;
+                    writeln!(&mut buffer, "echo -n -e '\r{dup_count}'")?;
                 }
             }
         }
