@@ -1,5 +1,6 @@
 mod duplicate;
 mod hash;
+mod inventory;
 mod metadata;
 
 use anyhow::{Context, Result};
@@ -11,6 +12,7 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::duplicate::{ScanFilter, StatusReport};
 use crate::hash::CompareMode;
+use crate::inventory::{DuplicateFile, DuplicateGroup, InventoryWriter};
 use duplicate::{DefaultFilter, Duplicate};
 
 const DEFAULT_COMPARE_SIZE: &str = "1M";
@@ -32,6 +34,8 @@ enum OutputFormat {
     Html,
     /// Output a shell script that can dedup files.
     Script,
+    /// Duplicates inventory
+    Inventory,
 }
 
 #[derive(Args)]
@@ -54,7 +58,7 @@ struct ScanArg {
 
 #[derive(Args)]
 struct DedupArg {
-    list: PathBuf,
+    inventory: PathBuf,
 }
 
 #[derive(Args)]
@@ -238,15 +242,39 @@ fn generate_html<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path, scan: &
     Ok(())
 }
 
+fn generate_inventory<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path) -> Result<()> {
+    let mut writer = InventoryWriter::create(output)?;
+    let iter = duplicate.result().map(|group| {
+        let files = group
+            .iter()
+            .map(|&file_ref| DuplicateFile {
+                ino: file_ref.metadata.ino,
+                path: file_ref.path.clone(),
+            })
+            .collect::<Vec<_>>();
+
+        DuplicateGroup { files }
+    });
+
+    writer.export(iter)?;
+    Ok(())
+}
+
 fn report<F: ScanFilter>(duplicate: &Duplicate<F>, arg: &ScanArg) -> Result<()> {
+    let path = arg.output.clone();
+
     match arg.format {
         OutputFormat::Html => {
-            let path = arg.output.clone().unwrap_or_else(|| PathBuf::from("./report.html"));
+            let path = path.unwrap_or_else(|| PathBuf::from("report.html"));
             generate_html(duplicate, &path, &arg).expect("unable to generate report page.");
         }
         OutputFormat::Script => {
-            let path = arg.output.clone().unwrap_or_else(|| PathBuf::from("./dedup.sh"));
+            let path = path.unwrap_or_else(|| PathBuf::from("dedup.sh"));
             generate_dedup_script(duplicate, &path).expect("unable to generate script.");
+        }
+        OutputFormat::Inventory => {
+            let path = path.unwrap_or_else(|| PathBuf::from("inventory.d2fn"));
+            generate_inventory(duplicate, &path).expect("unable to generate inventory file.");
         }
     }
     Ok(())
