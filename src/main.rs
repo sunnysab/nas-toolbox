@@ -186,6 +186,9 @@ fn generate_dedup_script<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path)
     );
     println!("Script has been written to {}", output.display());
     println!("Remember to grant execute permission before you run it.");
+
+    let inventory_path = Path::new("inventory.d2fn");
+    generate_inventory(duplicate, inventory_path)?;
     Ok(())
 }
 
@@ -239,10 +242,15 @@ fn generate_html<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path, scan: &
     html.write_all(content.as_bytes())
         .with_context(|| format!("when write to file"))?;
     println!("Report has been written to {}.", output.display());
+
+    let inventory_path = Path::new("inventory.d2fn");
+    generate_inventory(duplicate, inventory_path)?;
     Ok(())
 }
 
 fn generate_inventory<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path) -> Result<()> {
+    println!("Writing result inventory....");
+
     let mut writer = InventoryWriter::create(output)?;
     let iter = duplicate.result().map(|group| {
         let files = group
@@ -257,6 +265,7 @@ fn generate_inventory<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path) ->
     });
 
     writer.export(iter)?;
+    println!("Inventory exported.");
     Ok(())
 }
 
