@@ -232,9 +232,9 @@ fn generate_html<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path, scan: &
     context.insert("group_count", &mapped_groups.len());
     context.insert("groups", &mapped_groups);
     let parameter = if scan.verify {
-        "部分 + 完整内容验证".to_string()
+        "快速 + 完整内容验证".to_string()
     } else {
-        format!("仅比较前 {}", scan.compare_size)
+        format!("快速，仅比较前 {}", scan.compare_size)
     };
     context.insert("parameter", &parameter);
 

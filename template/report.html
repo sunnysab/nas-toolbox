@@ -10,13 +10,9 @@
             margin: 0 auto;
         }
 
-        .summary {
+        .summary {}
 
-        }
-
-        .details {
-
-        }
+        .details {}
 
         .detail-header {
             font-size: 1.1em;
@@ -26,12 +22,16 @@
             font-weight: bold;
             background-color: aliceblue;
         }
+
+        .copyright {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="summary">
-            <h1># {{ group_count }}</h1><br>
+            <h1>共 {{ group_count }} 条结果</h1><br>
             <h3>扫描模式：{{ parameter }}</h3>
         </div>
         <div class="details">
@@ -50,6 +50,9 @@
                 {% endfor %}
             </table>
         </div>
+    </div>
+    <div class="copyright">
+        Generate by <a href="https://github.com/sunnysab/d2fn">d2fn</a>, @copy; 2023 sunnysab
     </div>
 </body>
 </html>
