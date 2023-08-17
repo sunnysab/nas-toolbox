@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::duplicate::{ScanFilter, StatusReport};
 use crate::hash::CompareMode;
-use crate::inventory::{DuplicateFile, DuplicateGroup, InventoryWriter};
+use crate::inventory::{DuplicateFile, DuplicateGroup, InventoryReader, InventoryWriter};
 use duplicate::{DefaultFilter, Duplicate};
 
 const DEFAULT_COMPARE_SIZE: &str = "1M";
@@ -356,7 +356,32 @@ fn scan(arg: ScanArg) {
     report(&duplicate, &arg).expect("report failed");
 }
 
-fn dedup() {}
+fn dedup(arg: DedupArg) {
+    let path = &arg.inventory.as_path();
+    let reader = InventoryReader::open(path).expect("unable to open inventory.");
+
+    println!("{} in total..", reader.total());
+    for group in reader {
+        let group = match group {
+            Ok(g) => g,
+            Err(e) => {
+                eprintln!("error: when read duplicate group, {e}");
+                continue;
+            }
+        };
+
+        if let [first, rest @ ..] = group.files.as_slice() {
+            let source = &first.path;
+            for dup in rest {
+                let destination = &dup.path;
+
+                if let Err(e) = std::fs::hard_link(source, destination) {
+                    eprintln!("failed on {} :{e}", dup.ino);
+                }
+            }
+        }
+    }
+}
 
 fn hash(arg: HashArg) {
     let hash_mode = match (arg.full, arg.hash_size) {
@@ -376,7 +401,8 @@ fn main() {
 
     match args.command {
         Commands::Scan(arg) => scan(arg),
-        Commands::Dedup(_arg) => {}
+        Commands::Dedup(arg) => dedup(arg),
         Commands::Hash(arg) => hash(arg),
     }
+    println!("Done.");
 }

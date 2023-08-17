@@ -49,6 +49,10 @@ impl InventoryReader {
             read_count: 0,
         })
     }
+
+    pub fn total(&self) -> usize {
+        self.header.count
+    }
 }
 
 impl Iterator for InventoryReader {
