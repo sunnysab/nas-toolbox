@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::duplicate::{ScanFilter, StatusReport};
 use crate::hash::CompareMode;
-use crate::inventory::{DuplicateFile, DuplicateGroup, InventoryReader, InventoryWriter};
+use crate::inventory::{D2fnPath, DuplicateFile, DuplicateGroup, InventoryReader, InventoryWriter};
 use duplicate::{DefaultFilter, Duplicate};
 
 const DEFAULT_COMPARE_SIZE: &str = "1M";
@@ -258,7 +258,7 @@ fn generate_inventory<F: ScanFilter>(duplicate: &Duplicate<F>, output: &Path) ->
             .iter()
             .map(|&file_ref| DuplicateFile {
                 ino: file_ref.metadata.ino,
-                path: file_ref.path.clone(),
+                path: D2fnPath::from(file_ref.path.as_path()),
             })
             .collect::<Vec<_>>();
 
@@ -363,7 +363,7 @@ fn dedup(arg: DedupArg) {
 
     println!("{} in total..", reader.total());
     for group in reader {
-        let group = match group {
+        let mut group = match group {
             Ok(g) => g,
             Err(e) => {
                 eprintln!("error: when read duplicate group, {e}");
@@ -371,15 +371,15 @@ fn dedup(arg: DedupArg) {
             }
         };
 
-        if let [first, rest @ ..] = group.files.as_slice() {
-            let source = &first.path;
-            for dup in rest {
-                let destination = &dup.path;
+        // 牺牲一次复制, 尽量避免后续的 PathBuf::clone 以提升性能.
+        let source = group.files.swap_remove(0);
+        let src_path = Into::<PathBuf>::into(source.path);
+        for dup in group.files {
+            let destination = Into::<PathBuf>::into(dup.path);
 
-                let result = std::fs::remove_file(destination).and_then(|_| std::fs::hard_link(source, destination));
-                if let Err(e) = result {
-                    eprintln!("failed on {} :{e}", dup.ino);
-                }
+            let result = std::fs::remove_file(&destination).and_then(|_| std::fs::hard_link(&src_path, &destination));
+            if let Err(e) = result {
+                eprintln!("failed on {} :{e}", dup.ino);
             }
         }
     }

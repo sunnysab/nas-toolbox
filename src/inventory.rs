@@ -1,11 +1,36 @@
 use anyhow::{Context, Result};
 use bincode::{Decode, Encode};
+use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Seek, SeekFrom};
 use std::mem::size_of;
+use std::os::unix::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 
 pub const CURRENT_VERSION: u8 = 0x01;
+
+/// bincode 中实现的对 PathBuf 的序列化、反序列化代码，会将文件名按 UTF-8 对待
+/// 这可能导致对非 UTF-8 文件名的反序列化出现错误. 因此底层使用 `Vec<u8>` 处理.
+#[derive(Encode, Decode)]
+pub struct D2fnPath {
+    path: Vec<u8>,
+}
+
+impl Into<PathBuf> for D2fnPath {
+    fn into(self) -> PathBuf {
+        let os_path = OsString::from_vec(self.path);
+        PathBuf::from(os_path)
+    }
+}
+
+impl From<&Path> for D2fnPath {
+    fn from(value: &Path) -> Self {
+        let os_path = value.as_os_str();
+        let path = os_path.as_bytes().to_vec();
+
+        Self { path }
+    }
+}
 
 #[derive(Encode, Decode, Default)]
 pub struct Header {
@@ -17,7 +42,7 @@ pub struct Header {
 #[derive(Encode, Decode)]
 pub struct DuplicateFile {
     pub ino: u64,
-    pub path: PathBuf,
+    pub path: D2fnPath,
 }
 
 #[derive(Encode, Decode)]
