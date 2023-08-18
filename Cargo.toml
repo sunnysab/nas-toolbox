@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.72"
 bincode = "2.0.0-rc.3"
 blake3 = "1.4.1"
+byteorder = "1.4.3"
 clap = { version = "4.3.21", features = ["derive"] }
 filewalker = { git = "https://gitee.com/sunnysab/filewalker.git"}
 serde = { version = "1.0.163", features = ["derive"] }

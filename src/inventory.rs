@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use bincode::{Decode, Encode};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
 use std::mem::size_of;
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
@@ -16,9 +17,9 @@ pub struct D2fnPath {
     path: Vec<u8>,
 }
 
-impl Into<PathBuf> for D2fnPath {
-    fn into(self) -> PathBuf {
-        let os_path = OsString::from_vec(self.path);
+impl From<D2fnPath> for PathBuf {
+    fn from(value: D2fnPath) -> Self {
+        let os_path = OsString::from_vec(value.path);
         PathBuf::from(os_path)
     }
 }
@@ -36,7 +37,7 @@ impl From<&Path> for D2fnPath {
 pub struct Header {
     version: u8,
     offset: u8,
-    count: usize,
+    count: u32,
 }
 
 #[derive(Encode, Decode)]
@@ -52,31 +53,50 @@ pub struct DuplicateGroup {
 
 pub struct InventoryReader {
     reader: BufReader<File>,
-    header: Header,
+    buffer: Vec<u8>,
 
-    read_count: usize,
+    header: Header,
+    read_count: u32,
 }
 
 pub struct InventoryWriter {
+    buffer: Vec<u8>,
     writer: BufWriter<File>,
 }
 
 impl InventoryReader {
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path)?;
+        let buffer = vec![0u8; 1024 * 1024];
         let mut reader = BufReader::new(file);
 
-        let header = bincode::decode_from_reader(&mut reader, bincode::config::standard())
-            .with_context(|| "reading header.".to_string())?;
+        let header = Self::read_header(&mut reader).with_context(|| "reading header.".to_string())?;
         Ok(Self {
             reader,
+            buffer,
             header,
             read_count: 0,
         })
     }
 
     pub fn total(&self) -> usize {
-        self.header.count
+        self.header.count as usize
+    }
+
+    fn read_header<R: BufRead>(mut reader: R) -> Result<Header> {
+        let version = reader.read_u8()?;
+        let offset = reader.read_u8()?;
+        let count = reader.read_u32::<LittleEndian>()?;
+
+        Ok(Header { version, offset, count })
+    }
+
+    fn decode<D: Decode + Sized, R: BufRead>(mut reader: R, buf: &mut [u8]) -> Result<D> {
+        let size = reader.read_u16::<LittleEndian>()?;
+
+        reader.read_exact(&mut buf[..size as usize])?;
+        let (data, _) = bincode::decode_from_slice(&buf[..size as usize], bincode::config::standard())?;
+        Ok(data)
     }
 }
 
@@ -85,9 +105,10 @@ impl Iterator for InventoryReader {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.read_count < self.header.count {
-            let group = bincode::decode_from_reader(&mut self.reader, bincode::config::standard()).map_err(Into::into);
+            let result = Self::decode(&mut self.reader, &mut self.buffer);
+
             self.read_count += 1;
-            Some(group)
+            Some(result)
         } else {
             None
         }
@@ -97,27 +118,106 @@ impl Iterator for InventoryReader {
 impl InventoryWriter {
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::create(path)?;
+        let buffer = vec![0u8; 1024 * 1024];
         let mut writer = BufWriter::new(file);
 
-        let config = bincode::config::standard();
-        bincode::encode_into_std_write(Header::default(), &mut writer, config)?;
-        Ok(Self { writer })
+        Self::write_header(&mut writer, &Header::default())?;
+        Ok(Self { writer, buffer })
+    }
+
+    fn write_header<W: Write>(writer: &mut W, header: &Header) -> Result<()> {
+        writer.write_u8(header.version)?;
+        writer.write_u8(header.offset)?;
+        writer.write_u32::<LittleEndian>(header.count)?;
+        Ok(())
+    }
+
+    fn encode<D: Encode, W: Write>(val: D, writer: &mut W, buf: &mut [u8]) -> Result<()> {
+        let size = bincode::encode_into_slice(val, buf, bincode::config::standard())?;
+
+        writer.write_u16::<LittleEndian>(size as u16)?;
+        writer.write_all(buf)?;
+        Ok(())
     }
 
     pub fn export<T: Iterator<Item = DuplicateGroup>>(&mut self, groups: T) -> Result<()> {
-        let mut count = 0usize;
+        let mut count = 0u32;
         for group in groups {
             count += 1;
-            bincode::encode_into_std_write(group, &mut self.writer, bincode::config::standard())?;
+            Self::encode(group, &mut self.writer, &mut self.buffer)?;
         }
 
-        self.writer.seek(SeekFrom::Start(0))?;
         let new_header = Header {
             version: CURRENT_VERSION,
-            offset: (4 + size_of::<usize>()) as u8,
+            offset: (2 + size_of::<usize>()) as u8,
             count,
         };
-        bincode::encode_into_std_write(new_header, &mut self.writer, bincode::config::standard())?;
+        self.writer.seek(SeekFrom::Start(0))?;
+        Self::write_header(&mut self.writer, &new_header)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::inventory::{D2fnPath, DuplicateFile, DuplicateGroup, InventoryReader, InventoryWriter};
+    use std::path::{Path, PathBuf};
+
+    fn generate_test_data() -> Vec<DuplicateGroup> {
+        let file1 = "file1.txt".as_bytes().to_vec();
+        let file2 = "file2.txt".as_bytes().to_vec();
+        let file3 = "中文字符.txt".as_bytes().to_vec();
+        let file4 = "符号(x).txt".as_bytes().to_vec();
+        let file5 = "file5\0.txt".as_bytes().to_vec();
+
+        vec![
+            DuplicateGroup {
+                files: vec![
+                    DuplicateFile {
+                        ino: 1,
+                        path: D2fnPath { path: file1 },
+                    },
+                    DuplicateFile {
+                        ino: 2,
+                        path: D2fnPath { path: file2 },
+                    },
+                    DuplicateFile {
+                        ino: 3,
+                        path: D2fnPath { path: file3 },
+                    },
+                ],
+            },
+            DuplicateGroup {
+                files: vec![
+                    DuplicateFile {
+                        ino: 4,
+                        path: D2fnPath { path: file4 },
+                    },
+                    DuplicateFile {
+                        ino: 5,
+                        path: D2fnPath { path: file5 },
+                    },
+                ],
+            },
+        ]
+    }
+
+    #[test]
+    fn test_d2fn_path() {
+        let path = Path::new("./test-file");
+        let dataset = generate_test_data();
+
+        let mut writer = InventoryWriter::create(path).unwrap();
+        writer.export(dataset.into_iter()).unwrap();
+        drop(writer);
+
+        let reader = InventoryReader::open(path).unwrap();
+        for group in reader.flatten() {
+            for item in group.files {
+                let path = Into::<PathBuf>::into(item.path);
+                println!("({}): {}", item.ino, path.display());
+            }
+        }
+        std::fs::remove_file("./test-file").unwrap();
     }
 }
