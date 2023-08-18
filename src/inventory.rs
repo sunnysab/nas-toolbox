@@ -92,7 +92,7 @@ impl InventoryReader {
     }
 
     fn decode<D: Decode + Sized, R: BufRead>(mut reader: R, buf: &mut [u8]) -> Result<D> {
-        let size = reader.read_u16::<LittleEndian>()?;
+        let size = reader.read_u32::<LittleEndian>()?;
 
         reader.read_exact(&mut buf[..size as usize])?;
         let (data, _) = bincode::decode_from_slice(&buf[..size as usize], bincode::config::standard())?;
@@ -135,8 +135,8 @@ impl InventoryWriter {
     fn encode<D: Encode, W: Write>(val: D, writer: &mut W, buf: &mut [u8]) -> Result<()> {
         let size = bincode::encode_into_slice(val, buf, bincode::config::standard())?;
 
-        writer.write_u16::<LittleEndian>(size as u16)?;
-        writer.write_all(buf)?;
+        writer.write_u32::<LittleEndian>(size as u32)?;
+        writer.write_all(&buf[..size])?;
         Ok(())
     }
 
@@ -212,7 +212,9 @@ mod test {
         drop(writer);
 
         let reader = InventoryReader::open(path).unwrap();
-        for group in reader.flatten() {
+        println!("len(groups) = {}", reader.header.count);
+        for group in reader {
+            let group = group.unwrap();
             for item in group.files {
                 let path = Into::<PathBuf>::into(item.path);
                 println!("({}): {}", item.ino, path.display());
