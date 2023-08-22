@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 libc = "0.2"
-nix = { version = "0.26.2", default-features = false, features = ["ioctl", "fs"] }
+nix = { version = "0.26", default-features = false, features = ["ioctl", "fs"] }
+strum = { version = "0.25", features = ["derive"] }
