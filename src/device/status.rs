@@ -205,7 +205,6 @@ impl TryFrom<RawStatus> for TapeStatus {
     type Error = anyhow::Error;
 
     fn try_from(raw: RawStatus) -> Result<Self> {
-
         let state = DriverState::from_repr(raw.dsreg as usize)
             .with_context(|| format!("Unknown tape driver state from dsreg: {}", raw.dsreg))?;
 

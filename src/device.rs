@@ -1,4 +1,5 @@
 mod status;
+mod status_ex;
 
 pub use status::{Density, DriverState, TapeStatus};
 
