@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use strum::{EnumString, FromRepr};
+use strum::{EnumIter, EnumString, FromRepr, IntoEnumIterator};
 use crate::TapeDevice;
 
 #[derive(Debug)]
@@ -69,7 +69,7 @@ impl From<i32> for BlockSize {
 #[repr(C)]
 #[derive(Default)]
 pub struct RawStatus {
-    /// type of magnetic tape device
+    /// type of magnetic tape driver
     _type: i16,
     /// "drive status" register (device dependent)
     dsreg: i16,
@@ -160,11 +160,37 @@ pub enum DriverState {
     Loading = 46,
 }
 
+#[derive(EnumString, EnumIter, Clone, Copy, Debug)]
+pub enum Compression {
+    #[strum(serialize = "Off")]
+    Off = 0x00,
+    #[strum(serialize = "On")]
+    On = 0xffffffff,
+    #[strum(serialize = "IDRC Algorithm")]
+    Idrc = 0x10,
+    #[strum(serialize = "DCLZ Algorithm")]
+    Dclz = 0x20,
+
+    Unknown,
+}
+
+impl From<u32> for Compression {
+    fn from(value: u32) -> Self {
+        for predefined in Compression::iter() {
+            if predefined as u32 == value {
+                return predefined;
+            }
+        }
+        Compression::Unknown
+    }
+}
+
 #[derive(Debug)]
 pub struct TapeStatus {
     pub state: DriverState,
     pub block_size: BlockSize,
     pub density: &'static Density,
+    pub compression: Compression,
 
     /// relative file number of current position
     pub file_no: usize,
@@ -184,10 +210,12 @@ impl TryFrom<RawStatus> for TapeStatus {
             .with_context(|| format!("Unknown tape driver state from dsreg: {}", raw.dsreg))?;
 
         let density = Density::get(raw.density as u32);
+        let compression = Compression::from(raw.comp);
 
         let result = TapeStatus {
             state,
             density,
+            compression,
             block_size: BlockSize::from(raw.blksiz),
             file_no: raw.fileno as usize,
             block_no: raw.blkno as usize,
