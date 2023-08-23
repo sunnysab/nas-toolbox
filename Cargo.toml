@@ -3,6 +3,7 @@ members = [
     "filewalker",
     "d2fn",
     "tape",
+    "backup",
 ]
 
 [profile.release]
