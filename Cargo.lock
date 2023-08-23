@@ -286,7 +286,6 @@ dependencies = [
 [[package]]
 name = "filewalker"
 version = "0.1.0"
-source = "git+https://gitee.com/sunnysab/filewalker.git#2ea6351e0d5b5bb8dc578ce87ea376a5ebc414ab"
 
 [[package]]
 name = "fnv"

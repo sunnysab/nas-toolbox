@@ -1,9 +1,11 @@
+mod locate;
 mod status;
 mod status_ex;
 
-use std::os::fd::RawFd;
 use anyhow::Result;
+pub use locate::{Location, LocationBuilder};
 pub use status::{Density, DriverState, TapeStatus};
+use std::os::fd::RawFd;
 
 enum MtOperation {
     /// Write an end-of-file record
