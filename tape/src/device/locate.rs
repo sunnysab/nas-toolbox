@@ -28,12 +28,6 @@ pub struct MtLocate {
     reserved: [u8; 64],
 }
 
-mod ioctl_func {
-    use super::MtLocate;
-
-    nix::ioctl_write_ptr!(locate, b'm', 10u8, MtLocate);
-}
-
 enum Target {
     File(u64),
     Block(u64),
@@ -108,6 +102,14 @@ pub struct Location {
     to_partition: Option<i64>,
 }
 
+mod ioctl_func {
+    use super::MtLocate;
+
+    nix::ioctl_write_ptr!(locate, b'm', 10u8, MtLocate);
+    nix::ioctl_read!(rdspos, b'm', 5u8, u32);
+    nix::ioctl_write_ptr!(slocate, b'm', 5u8, u32);
+}
+
 impl TapeDevice {
     pub fn locate_to(&self, location: &Location) -> Result<u32> {
         assert_eq!(std::mem::size_of::<MtLocate>(), 96);
@@ -142,5 +144,21 @@ impl TapeDevice {
         // Note: `/dev/nsa0` is needed, while operation on `/dev/sa0` leads always leads to status BOP.
         let ret = unsafe { ioctl_func::locate(self.fd, &mut param)? };
         Ok(ret as u32)
+    }
+
+    pub fn read_scsi_pos(&self) -> Result<u32> {
+        let mut result = 0u32;
+        unsafe {
+            ioctl_func::rdspos(self.fd, &mut result)?;
+        }
+        Ok(result)
+    }
+
+    pub fn write_scsi_pos(&self, pos: u32) -> Result<()> {
+        let mut _result = pos;
+        unsafe {
+            ioctl_func::slocate(self.fd, &mut _result)?;
+        }
+        Ok(())
     }
 }
