@@ -1,6 +1,8 @@
 mod status;
 mod status_ex;
 
+use std::os::fd::RawFd;
+use anyhow::Result;
 pub use status::{Density, DriverState, TapeStatus};
 
 enum MtOperation {
@@ -46,4 +48,18 @@ enum MtOperation {
     MtLOAD = 19,
     /// Write an end-of-file record without waiting
     MtWEOFI = 20,
+}
+
+pub struct TapeDevice {
+    fd: RawFd,
+}
+
+impl TapeDevice {
+    pub fn open<P: nix::NixPath + ?Sized>(path: &P) -> Result<Self> {
+        use nix::fcntl::OFlag;
+        use nix::sys::stat::Mode;
+
+        let fd = nix::fcntl::open(path, OFlag::O_RDWR, Mode::all())?;
+        Ok(Self { fd })
+    }
 }
