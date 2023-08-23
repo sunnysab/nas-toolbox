@@ -47,6 +47,7 @@ pub enum Operation {
     WriteEofImmediately = 20,
 }
 
+#[repr(C)]
 pub struct MtOp {
     /// Operations defined above
     op: u16,
