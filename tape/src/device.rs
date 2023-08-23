@@ -1,3 +1,4 @@
+mod eot;
 mod limit;
 mod locate;
 mod status;

@@ -7,9 +7,7 @@ use device::TapeDevice;
 fn main() -> Result<()> {
     let device = TapeDevice::open("/dev/nsa0")?;
 
-    let location = LocationBuilder::new().block(4);
-    let res = device.read_block_limit()?;
-
-    println!("{:?}", res);
+    let model = device.get_eot_model();
+    println!("{:?}", model);
     Ok(())
 }
