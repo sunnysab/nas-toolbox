@@ -1,6 +1,5 @@
 use super::TapeDevice;
 use anyhow::Result;
-use std::result;
 
 #[repr(C)]
 #[derive(Debug)]

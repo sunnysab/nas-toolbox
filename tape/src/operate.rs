@@ -23,9 +23,9 @@ pub enum Operation {
     EnableCache = 8,
     /// Disable controller cache
     DisableCache = 9,
-    /// Set block size for device
+    /// Set block size for lib
     SetBlockSize = 10,
-    /// Set density values for device
+    /// Set density values for lib
     SetDensity = 11,
     /// Erase to EOM
     EraseToEnd = 12,

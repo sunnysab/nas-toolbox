@@ -8,7 +8,7 @@ use std::ffi::CStr;
 pub struct MtStatusEx {
     /// Device driver name, such as `sa(8)`.
     periph_name: String,
-    /// Device id. For device `/dev/sa0`, this value could be `0`.
+    /// Device id. For lib `/dev/sa0`, this value could be `0`.
     unit_number: u32,
     /// SCSI Vendor ID
     vendor: String,

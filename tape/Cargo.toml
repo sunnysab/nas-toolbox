@@ -5,6 +5,12 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "tape"
+path = "src/lib.rs"
+crate-type = ["lib"]
+
+
 [dependencies]
 anyhow = "1.0"
 libc = "0.2"

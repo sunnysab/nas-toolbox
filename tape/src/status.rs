@@ -1,6 +1,6 @@
+use crate::TapeDevice;
 use anyhow::{bail, Context, Result};
 use strum::{EnumIter, EnumString, FromRepr, IntoEnumIterator};
-use crate::TapeDevice;
 
 #[derive(Debug)]
 pub struct Density {
@@ -16,20 +16,90 @@ pub struct Density {
 /// Copied from `freebsd-src/lib/libmt/mtlib.c`,
 /// which are originally from T10 Project 997D
 static DENSITIES: [Density; 14] = [
-    Density { code: 0x40, bpmm: 4880, bpi: 123952, description: "LTO-1" },
-    Density { code: 0x42, bpmm: 7398, bpi: 187909, description: "LTO-2" },
-    Density { code: 0x44, bpmm: 9638, bpi: 244805, description: "LTO-3" },
-    Density { code: 0x46, bpmm: 12725, bpi: 323215, description: "LTO-4" },
-    Density { code: 0x40, bpmm: 4880, bpi: 123952, description: "LTO-1" },
-    Density { code: 0x42, bpmm: 7398, bpi: 187909, description: "LTO-2" },
-    Density { code: 0x44, bpmm: 9638, bpi: 244805, description: "LTO-3" },
-    Density { code: 0x46, bpmm: 12725, bpi: 323215, description: "LTO-4" },
-    Density { code: 0x58, bpmm: 15142, bpi: 384607, description: "LTO-5" },
-    Density { code: 0x5A, bpmm: 15142, bpi: 384607, description: "LTO-6" },
-    Density { code: 0x5C, bpmm: 19107, bpi: 485318, description: "LTO-7" },
-    Density { code: 0x5D, bpmm: 19107, bpi: 485318, description: "LTO-M8" },
-    Density { code: 0x5E, bpmm: 20669, bpi: 524993, description: "LTO-8" },
-    Density { code: 0x60, bpmm: 23031, bpi: 584987, description: "LTO-9" },
+    Density {
+        code: 0x40,
+        bpmm: 4880,
+        bpi: 123952,
+        description: "LTO-1",
+    },
+    Density {
+        code: 0x42,
+        bpmm: 7398,
+        bpi: 187909,
+        description: "LTO-2",
+    },
+    Density {
+        code: 0x44,
+        bpmm: 9638,
+        bpi: 244805,
+        description: "LTO-3",
+    },
+    Density {
+        code: 0x46,
+        bpmm: 12725,
+        bpi: 323215,
+        description: "LTO-4",
+    },
+    Density {
+        code: 0x40,
+        bpmm: 4880,
+        bpi: 123952,
+        description: "LTO-1",
+    },
+    Density {
+        code: 0x42,
+        bpmm: 7398,
+        bpi: 187909,
+        description: "LTO-2",
+    },
+    Density {
+        code: 0x44,
+        bpmm: 9638,
+        bpi: 244805,
+        description: "LTO-3",
+    },
+    Density {
+        code: 0x46,
+        bpmm: 12725,
+        bpi: 323215,
+        description: "LTO-4",
+    },
+    Density {
+        code: 0x58,
+        bpmm: 15142,
+        bpi: 384607,
+        description: "LTO-5",
+    },
+    Density {
+        code: 0x5A,
+        bpmm: 15142,
+        bpi: 384607,
+        description: "LTO-6",
+    },
+    Density {
+        code: 0x5C,
+        bpmm: 19107,
+        bpi: 485318,
+        description: "LTO-7",
+    },
+    Density {
+        code: 0x5D,
+        bpmm: 19107,
+        bpi: 485318,
+        description: "LTO-M8",
+    },
+    Density {
+        code: 0x5E,
+        bpmm: 20669,
+        bpi: 524993,
+        description: "LTO-8",
+    },
+    Density {
+        code: 0x60,
+        bpmm: 23031,
+        bpi: 584987,
+        description: "LTO-9",
+    },
 ];
 
 static UNKNOWN_DENSITY: Density = Density {
@@ -71,9 +141,9 @@ impl From<i32> for BlockSize {
 pub struct RawStatus {
     /// type of magnetic tape driver
     _type: i16,
-    /// "drive status" register (device dependent)
+    /// "drive status" register (lib dependent)
     dsreg: i16,
-    /// "error" register (device dependent)
+    /// "error" register (lib dependent)
     erreg: i16,
     /// residual count
     resid: i16,
@@ -112,7 +182,6 @@ pub struct RawStatus {
     /// relative block number of current position
     blkno: i32,
 }
-
 
 #[derive(Debug, EnumString, FromRepr)]
 pub enum DriverState {
@@ -200,7 +269,6 @@ pub struct TapeStatus {
     pub residual: usize,
 }
 
-
 impl TryFrom<RawStatus> for TapeStatus {
     type Error = anyhow::Error;
 
@@ -230,7 +298,6 @@ mod ioctl_func {
     nix::ioctl_read!(get_status, b'm', 2u8, RawStatus);
 }
 
-
 impl TapeDevice {
     pub fn status(&self) -> Result<TapeStatus> {
         assert_eq!(std::mem::size_of::<RawStatus>(), 76);
@@ -240,9 +307,9 @@ impl TapeDevice {
             ioctl_func::get_status(self.fd, &mut raw_status)?;
         }
 
-        /* #define MT_ISAR  0x07, scsi device */
+        /* #define MT_ISAR  0x07, scsi lib */
         if raw_status._type != 0x07 {
-            bail!("Your tape device is not of SCSI.");
+            bail!("Your tape lib is not of SCSI.");
         }
         TapeStatus::try_from(raw_status)
     }

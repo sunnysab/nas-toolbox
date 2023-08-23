@@ -55,7 +55,7 @@ mod ioctl_func {
 }
 
 impl TapeDevice {
-    /// Output (and clear) error status information about this device.  
+    /// Output (and clear) error status information about this lib.  
     ///
     /// For every normal operation (e.g., a read or a write) and every control operation (e.g,, a rewind), the
     /// driver stores up the last command executed and it is associated status and any residual counts (if any).
