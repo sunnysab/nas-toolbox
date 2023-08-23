@@ -7,7 +7,7 @@ use device::TapeDevice;
 fn main() -> Result<()> {
     let device = TapeDevice::open("/dev/nsa0")?;
 
-    let model = device.get_eot_model();
-    println!("{:?}", model);
+    let err = device.get_last_error()?;
+    println!("{:?}", err);
     Ok(())
 }

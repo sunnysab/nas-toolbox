@@ -1,4 +1,5 @@
 mod eot;
+mod err;
 mod limit;
 mod locate;
 mod operate;
@@ -6,10 +7,14 @@ mod status;
 mod status_ex;
 
 use anyhow::Result;
+use std::os::fd::RawFd;
+
+pub use eot::EotModel;
+pub use err::{ErrorCounter, ScsiTapeErrors};
 pub use limit::BlockLimit;
 pub use locate::{Location, LocationBuilder};
+pub use operate::Operation;
 pub use status::{Density, DriverState, TapeStatus};
-use std::os::fd::RawFd;
 
 pub struct TapeDevice {
     fd: RawFd,
