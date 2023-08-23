@@ -1,8 +1,10 @@
+mod limit;
 mod locate;
 mod status;
 mod status_ex;
 
 use anyhow::Result;
+pub use limit::BlockLimit;
 pub use locate::{Location, LocationBuilder};
 pub use status::{Density, DriverState, TapeStatus};
 use std::os::fd::RawFd;
