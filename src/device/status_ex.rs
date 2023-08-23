@@ -1,11 +1,11 @@
 use std::ffi::CStr;
 use anyhow::{bail, Result};
 use serde::Deserialize;
-use crate::TapeDevice;
+use super::TapeDevice;
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-struct MtextgetNode {
+pub struct MtStatusEx {
     /// Device driver name, such as `sa(8)`.
     periph_name: String,
     /// Device id. For device `/dev/sa0`, this value could be `0`.
@@ -38,8 +38,8 @@ struct MtextgetNode {
     compression_enabled: i32,
     /// Numeric compression algorithm
     compression_algorithm: u32,
-    // protection node described outside
-    // protection: Protection,
+    /// protection node described outside
+    protection: Protection,
 
     /// Block size reported by drive or set by user
     media_blocksize: u32,
@@ -63,13 +63,13 @@ struct MtextgetNode {
     residual: i64,
     /// Current state of the driver
     dsreg: i32,
-    // density node described outside
-    // mtdensity: Mtdensity,
+    /// density node described outside
+    mtdensity: MtDensity,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-struct Protection {
+pub struct Protection {
     /// Set to 1 if protection information is supported
     protection_supported: i32,
     /// Current Protection Method
@@ -86,15 +86,15 @@ struct Protection {
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-struct Mtdensity {
+pub struct MtDensity {
     /// Current Medium Density Code
-    media_density: u8,
+    media_density: u32,
     density_report: Vec<DensityReport>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-struct DensityReport {
+pub struct DensityReport {
     /// Medium type report
     medium_type_report: i32,
     /// Media report
@@ -104,13 +104,13 @@ struct DensityReport {
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-struct DensityEntry {
+pub struct DensityEntry {
     /// Primary Density Code
     primary_density_code: u8,
     /// Secondary Density Code
     secondary_density_code: u8,
     /// Density Flags
-    density_flags: u32,
+    density_flags: String,
     /// Bits per mm
     bits_per_mm: u32,
     /// Media width
@@ -141,7 +141,7 @@ struct DensityEntry {
 }
 
 #[derive(Debug, Deserialize, Default)]
-struct DensityCodeList {
+pub struct DensityCodeList {
     /// Density Code
     density_code: Vec<u8>,
 }
@@ -192,8 +192,8 @@ impl TapeDevice {
         match raw_status.result {
             StatusExtResult::None => Ok(None),
             StatusExtResult::Ok => {
-                let len = raw_status.fill_len as usize;
-                let xml_content = String::from_raw_parts(buffer.as_mut_ptr(), len, len);
+                let cstr = CStr::from_ptr(buffer.as_ptr() as * const i8);
+                let xml_content = cstr.to_string_lossy().to_string();
                 Ok(Some(xml_content))
             }
             StatusExtResult::NeedMoreSpace => {
@@ -205,12 +205,15 @@ impl TapeDevice {
             }
         }
     }
-    pub fn status_ex(&self) -> Result<Option<()>> {
+    pub fn status_ex(&self) -> Result<Option<MtStatusEx>> {
         let xml = match unsafe { self.status_ex_get_xml()? } {
             Some(content) => content,
             None => return Ok(None),
         };
 
-        Ok(Some(()))
+        // TODO: We need a specified xml parser to deal with it
+        // DensityEntry::density_flags should be a integer, which represents in hex in xml.
+        let result: MtStatusEx = serde_xml_rs::from_str(&xml)?;
+        Ok(Some(result))
     }
 }
