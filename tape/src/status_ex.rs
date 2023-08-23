@@ -236,7 +236,7 @@ impl TapeDevice {
 
         let driver_state_register = status_ex.dsreg;
         DriverState::from_repr(driver_state_register as usize)
-            .map(|state| Some(state))
+            .map(Option::Some)
             .ok_or_else(|| anyhow!("Unexpected dsreg: {driver_state_register}"))
     }
 }

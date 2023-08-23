@@ -2,20 +2,20 @@ use super::TapeDevice;
 use anyhow::Result;
 
 enum MtLocateDestType {
-    MtLocateDestObject = 0x00,
-    MtLocateDestFile = 0x01,
-    MtLocateDestSet = 0x02,
-    MtLocateDestEod = 0x03,
+    Object = 0x00,
+    File = 0x01,
+    Setmark = 0x02,
+    Eod = 0x03,
 }
 
 enum MtLocateBam {
-    MtLocateBamImplicit = 0x00,
-    MtLocateBamExplicit = 0x01,
+    Implicit = 0x00,
+    Explicit = 0x01,
 }
 
 enum MtLocateFlags {
-    MtLocateFlagImmed = 0x01,
-    MtLocateFlagChangePart = 0x02,
+    Immediately = 0x01,
+    ChangePartition = 0x02,
 }
 
 #[repr(C)]
@@ -35,18 +35,10 @@ enum Target {
     Eod,
 }
 
+#[derive(Default)]
 pub struct LocationBuilder {
     immediate: bool,
     to_partition: Option<i64>,
-}
-
-impl Default for LocationBuilder {
-    fn default() -> Self {
-        Self {
-            immediate: false,
-            to_partition: None,
-        }
-    }
 }
 
 impl LocationBuilder {
@@ -116,33 +108,33 @@ impl TapeDevice {
 
         let mut param: MtLocate = unsafe { std::mem::zeroed() };
         if location.immediate {
-            param.flags |= MtLocateFlags::MtLocateFlagImmed as u32;
+            param.flags |= MtLocateFlags::Immediately as u32;
         }
         if let Some(partition) = location.to_partition {
             param.partition = partition;
-            param.flags |= MtLocateFlags::MtLocateFlagChangePart as u32;
+            param.flags |= MtLocateFlags::ChangePartition as u32;
         }
-        param.block_address_mode = MtLocateBam::MtLocateBamImplicit as u32;
+        param.block_address_mode = MtLocateBam::Implicit as u32;
 
         match location.target {
             Target::File(file) => {
-                param.dest_type = MtLocateDestType::MtLocateDestFile as u32;
+                param.dest_type = MtLocateDestType::File as u32;
                 param.logical_id = file;
             }
             Target::Block(block) => {
-                param.dest_type = MtLocateDestType::MtLocateDestObject as u32;
+                param.dest_type = MtLocateDestType::Object as u32;
                 param.logical_id = block;
             }
             Target::Setmark(setmark) => {
-                param.dest_type = MtLocateDestType::MtLocateDestSet as u32;
+                param.dest_type = MtLocateDestType::Setmark as u32;
                 param.logical_id = setmark;
             }
             Target::Eod => {
-                param.dest_type = MtLocateDestType::MtLocateDestEod as u32;
+                param.dest_type = MtLocateDestType::Eod as u32;
             }
         }
         // Note: `/dev/nsa0` is needed, while operation on `/dev/sa0` leads always leads to status BOP.
-        let ret = unsafe { ioctl_func::locate(self.fd, &mut param)? };
+        let ret = unsafe { ioctl_func::locate(self.fd, &param)? };
         Ok(ret as u32)
     }
 
@@ -157,7 +149,7 @@ impl TapeDevice {
     pub fn write_scsi_pos(&self, pos: u32) -> Result<()> {
         let mut _result = pos;
         unsafe {
-            ioctl_func::slocate(self.fd, &mut _result)?;
+            ioctl_func::slocate(self.fd, &_result)?;
         }
         Ok(())
     }

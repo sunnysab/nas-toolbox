@@ -1,6 +1,6 @@
 use crate::TapeDevice;
 use anyhow::{bail, Context, Result};
-use strum::{EnumIter, EnumString, FromRepr, IntoEnumIterator};
+use strum::{EnumIter, EnumString, FromRepr};
 
 #[derive(Debug)]
 pub struct Density {
@@ -232,25 +232,26 @@ pub enum DriverState {
 #[derive(EnumString, EnumIter, Clone, Copy, Debug)]
 pub enum Compression {
     #[strum(serialize = "Off")]
-    Off = 0x00,
+    Off,
     #[strum(serialize = "On")]
-    On = 0xffffffff,
+    On,
     #[strum(serialize = "IDRC Algorithm")]
-    Idrc = 0x10,
+    Idrc,
     #[strum(serialize = "DCLZ Algorithm")]
-    Dclz = 0x20,
+    Dclz,
 
     Unknown,
 }
 
 impl From<u32> for Compression {
     fn from(value: u32) -> Self {
-        for predefined in Compression::iter() {
-            if predefined as u32 == value {
-                return predefined;
-            }
+        match value {
+            0 => Compression::Off,
+            1 | 0xffffffff => Compression::On,
+            0x10 => Compression::Idrc,
+            0x20 => Compression::Dclz,
+            _ => Compression::Unknown,
         }
-        Compression::Unknown
     }
 }
 

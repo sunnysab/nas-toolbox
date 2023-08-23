@@ -35,7 +35,7 @@ impl TapeDevice {
         // Set the EOT filemark model to argument and output the old and new models.  Typically this will be 2
         // filemarks, but some devices (typically QIC cartridge drives) can only write 1 filemark.
         // You may only choose a value of 1 or 2.
-        let mut eot_model = match model {
+        let eot_model = match model {
             EotModel::OneSetmark => 1u32,
             EotModel::TwoSetmarks => 2u32,
             EotModel::Many(_) => {
@@ -43,7 +43,7 @@ impl TapeDevice {
             }
         };
 
-        unsafe { ioctl_func::set_eot_model(self.fd, &mut eot_model)? };
+        unsafe { ioctl_func::set_eot_model(self.fd, &eot_model)? };
         Ok(())
     }
 }

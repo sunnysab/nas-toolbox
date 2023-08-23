@@ -67,10 +67,10 @@ impl TapeDevice {
             let mut mt_op: MtOp = std::mem::zeroed();
             mt_op.op = op as u16;
             mt_op.count = count as i32;
-            ioctl_func::tape_op(self.fd, &mut mt_op)?
+            ioctl_func::tape_op(self.fd, &mt_op)?
         };
 
-        Ok(ret as i32)
+        Ok(ret)
     }
 
     pub fn write_eof(&self, count: u32) -> Result<()> {
