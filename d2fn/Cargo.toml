@@ -16,9 +16,3 @@ serde = { version = "1.0.163", features = ["derive"] }
 tera = { version = "1.19.0", default-features = false }
 terminal_size = "0.2.6"
 unicode-width = "0.1.10"
-
-[profile.release]
-lto = "fat"
-opt-level = 3
-codegen-units = 1
-strip = true
