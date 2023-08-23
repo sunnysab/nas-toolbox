@@ -1,7 +1,7 @@
-use std::ffi::CStr;
-use anyhow::{bail, Result};
+use super::{DriverState, TapeDevice};
+use anyhow::{anyhow, bail, Result};
 use serde::Deserialize;
-use super::TapeDevice;
+use std::ffi::CStr;
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -127,7 +127,6 @@ pub struct DensityEntry {
     description: String,
 
     /* additional fields for medium type report */
-
     /// Medium type report
     medium_type: Option<u8>,
     /// Number of Density Codes
@@ -145,7 +144,6 @@ pub struct DensityCodeList {
     /// Density Code
     density_code: Vec<u8>,
 }
-
 
 #[repr(C)]
 #[derive(Debug)]
@@ -167,16 +165,13 @@ pub struct RawStatusEx {
     reserved: [u8; 64],
 }
 
-
 mod ioctl_func {
     use super::RawStatusEx;
 
     nix::ioctl_readwrite!(get_status_ex, b'm', 11u8, RawStatusEx);
 }
 
-
 impl TapeDevice {
-
     unsafe fn status_ex_get_xml(&self) -> Result<Option<String>> {
         assert_eq!(std::mem::size_of::<RawStatusEx>(), 216);
 
@@ -192,7 +187,7 @@ impl TapeDevice {
         match raw_status.result {
             StatusExtResult::None => Ok(None),
             StatusExtResult::Ok => {
-                let cstr = CStr::from_ptr(buffer.as_ptr() as * const i8);
+                let cstr = CStr::from_ptr(buffer.as_ptr() as *const i8);
                 let xml_content = cstr.to_string_lossy().to_string();
                 Ok(Some(xml_content))
             }
@@ -200,7 +195,9 @@ impl TapeDevice {
                 bail!("Buffer is too small, adjust ALLOC_LEN up and try again.")
             }
             StatusExtResult::GetError => {
-                let message = CStr::from_ptr(raw_status.err_str.as_mut_ptr() as *mut libc::c_char).to_str().unwrap();
+                let message = CStr::from_ptr(raw_status.err_str.as_mut_ptr() as *mut libc::c_char)
+                    .to_str()
+                    .unwrap();
                 bail!("{message}")
             }
         }
@@ -215,5 +212,31 @@ impl TapeDevice {
         // DensityEntry::density_flags should be a integer, which represents in hex in xml.
         let result: MtStatusEx = serde_xml_rs::from_str(&xml)?;
         Ok(Some(result))
+    }
+
+    pub fn protect(&self) -> Result<Option<Protection>> {
+        let status_ex = self.status_ex()?;
+        let protection = status_ex.map(|status| status.protection);
+
+        Ok(protection)
+    }
+
+    pub fn density(&self) -> Result<Option<MtDensity>> {
+        let status_ex = self.status_ex()?;
+        let density = status_ex.map(|status| status.mtdensity);
+
+        Ok(density)
+    }
+
+    pub fn flag(&self) -> Result<Option<DriverState>> {
+        let status_ex = match self.status_ex()? {
+            None => return Ok(None),
+            Some(s) => s,
+        };
+
+        let driver_state_register = status_ex.dsreg;
+        DriverState::from_repr(driver_state_register as usize)
+            .map(|state| Some(state))
+            .ok_or_else(|| anyhow!("Unexpected dsreg: {driver_state_register}"))
     }
 }
