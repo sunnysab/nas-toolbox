@@ -1,0 +1,188 @@
+<mtextget type="node">
+    <periph_name type="str" size="3" fmt="%s" desc="">sa</periph_name>
+    <unit_number type="uint" size="4" fmt="%u" desc="">0</unit_number>
+    <vendor type="str" size="9" fmt="%s" desc="SCSI Vendor ID">HP</vendor>
+    <product type="str" size="17" fmt="%s" desc="SCSI Product ID">Ultrium 6-SCSI</product>
+    <revision type="str" size="5" fmt="%s" desc="SCSI Revision">J3LZ</revision>
+    <serial_num type="str" size="11" fmt="%s" desc="Serial Number">HUJ4140531</serial_num>
+    <maxio type="uint" size="4" fmt="%u" desc="Maximum I/O size allowed by driver and controller">1048576</maxio>
+    <cpi_maxio type="uint" size="4" fmt="%u" desc="Maximum I/O size reported by controller">5201920</cpi_maxio>
+    <max_blk type="uint" size="4" fmt="%u" desc="Maximum block size supported by tape drive and media">16777215</max_blk>
+    <min_blk type="uint" size="4" fmt="%u" desc="Minimum block size supported by tape drive and media">1</min_blk>
+    <blk_gran type="uint" size="4" fmt="%u" desc="Block granularity supported by tape drive and media">0</blk_gran>
+    <max_effective_iosize type="uint" size="4" fmt="%u" desc="Maximum possible I/O size">1048576</max_effective_iosize>
+    <fixed_mode type="int" size="4" fmt="%d" desc="Set to 1 for fixed block mode, 0 for variable block">1</fixed_mode>
+    <compression_supported type="int" size="4" fmt="%d" desc="Set to 1 if compression is supported, 0 if not">1</compression_supported>
+    <compression_enabled type="int" size="4" fmt="%d" desc="Set to 1 if compression is enabled, 0 if not">1</compression_enabled>
+    <compression_algorithm type="uint" size="4" fmt="%u" desc="Numeric compression algorithm">1</compression_algorithm>
+    <protection type="node">
+        <protection_supported type="int" size="4" fmt="%d" desc="Set to 1 if protection information is supported">1</protection_supported>
+        <prot_method type="uint" size="4" fmt="%u" desc="Current Protection Method">0</prot_method>
+        <pi_length type="uint" size="4" fmt="%u" desc="Length of Protection Information">0</pi_length>
+        <lbp_w type="uint" size="4" fmt="%u" desc="Check Protection on Writes">0</lbp_w>
+        <lbp_r type="uint" size="4" fmt="%u" desc="Check and Include Protection on Reads">0</lbp_r>
+        <rbdp type="uint" size="4" fmt="%u" desc="Transfer Protection Information for RECOVER BUFFERED DATA command">0</rbdp>
+    </protection>
+    <media_blocksize type="uint" size="4" fmt="%u" desc="Block size reported by drive or set by user">512</media_blocksize>
+    <calculated_fileno type="int" size="8" fmt="%jd" desc="Calculated file number, -1 if unknown">0</calculated_fileno>
+    <calculated_rel_blkno type="int" size="8" fmt="%jd" desc="Calculated block number relative to file, set to -1 if unknown">0</calculated_rel_blkno>
+    <reported_fileno type="int" size="8" fmt="%jd" desc="File number reported by drive, -1 if unknown">0</reported_fileno>
+    <reported_blkno type="int" size="8" fmt="%jd" desc="Block number relative to BOP/BOT reported by drive, -1 if unknown">0</reported_blkno>
+    <partition type="int" size="8" fmt="%jd" desc="Current partition number, 0 is the default">0</partition>
+    <bop type="int" size="4" fmt="%d" desc="Set to 1 if drive is at the beginning of partition/tape, 0 if not, -1 if unknown">1</bop>
+    <eop type="int" size="4" fmt="%d" desc="Set to 1 if drive is past early warning, 0 if not, -1 if unknown">0</eop>
+    <bpew type="int" size="4" fmt="%d" desc="Set to 1 if drive is past programmable early warning, 0 if not, -1 if unknown">0</bpew>
+    <residual type="int" size="8" fmt="%jd" desc="Residual for the last I/O">0</residual>
+    <dsreg type="int" size="1" fmt="%d" desc="Current state of the driver">1</dsreg>
+    <mtdensity type="node">
+        <media_density type="uint" size="1" fmt="%u" desc="Current Medium Density">90</media_density>
+        <density_report type="node">
+            <medium_type_report type="int" size="4" fmt="%d" desc="Medium type report">0</medium_type_report>
+            <media_report type="int" size="4" fmt="%d" desc="Media report">0</media_report>
+            <density_entry type="node" num="0">
+                <primary_density_code type="uint" size="1" fmt="%u" desc="Primary Density Code">70</primary_density_code>
+                <secondary_density_code type="uint" size="1" fmt="%u" desc="Secondary Density Code">70</secondary_density_code>
+                <density_flags type="uint" size="4" fmt="%#x" desc="Density Flags">0</density_flags>
+                <bits_per_mm type="uint" size="4" fmt="%u" desc="Bits per mm">12725</bits_per_mm>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <tracks type="uint" size="4" fmt="%u" desc="Number of Tracks">896</tracks>
+                <capacity type="uint" size="4" fmt="%u" desc="Capacity">800000</capacity>
+                <assigning_org type="str" size="8" fmt="%s" desc="Assigning Organization">LTO-CVE</assigning_org>
+                <density_name type="str" size="6" fmt="%s" desc="Density Name">U-416</density_name>
+                <description type="str" size="14" fmt="%s" desc="Description">Ultrium 4/16T</description>
+            </density_entry>
+            <density_entry type="node" num="1">
+                <primary_density_code type="uint" size="1" fmt="%u" desc="Primary Density Code">88</primary_density_code>
+                <secondary_density_code type="uint" size="1" fmt="%u" desc="Secondary Density Code">88</secondary_density_code>
+                <density_flags type="uint" size="4" fmt="%#x" desc="Density Flags">0x80</density_flags>
+                <bits_per_mm type="uint" size="4" fmt="%u" desc="Bits per mm">15142</bits_per_mm>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <tracks type="uint" size="4" fmt="%u" desc="Number of Tracks">1280</tracks>
+                <capacity type="uint" size="4" fmt="%u" desc="Capacity">1500000</capacity>
+                <assigning_org type="str" size="8" fmt="%s" desc="Assigning Organization">LTO-CVE</assigning_org>
+                <density_name type="str" size="6" fmt="%s" desc="Density Name">U-516</density_name>
+                <description type="str" size="14" fmt="%s" desc="Description">Ultrium 5/16T</description>
+            </density_entry>
+            <density_entry type="node" num="2">
+                <primary_density_code type="uint" size="1" fmt="%u" desc="Primary Density Code">90</primary_density_code>
+                <secondary_density_code type="uint" size="1" fmt="%u" desc="Secondary Density Code">90</secondary_density_code>
+                <density_flags type="uint" size="4" fmt="%#x" desc="Density Flags">0xa0</density_flags>
+                <bits_per_mm type="uint" size="4" fmt="%u" desc="Bits per mm">15142</bits_per_mm>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <tracks type="uint" size="4" fmt="%u" desc="Number of Tracks">2176</tracks>
+                <capacity type="uint" size="4" fmt="%u" desc="Capacity">2500000</capacity>
+                <assigning_org type="str" size="8" fmt="%s" desc="Assigning Organization">LTO-CVE</assigning_org>
+                <density_name type="str" size="6" fmt="%s" desc="Density Name">U-616</density_name>
+                <description type="str" size="14" fmt="%s" desc="Description">Ultrium 6/16T</description>
+            </density_entry>
+        </density_report>
+        <density_report type="node">
+            <medium_type_report type="int" size="4" fmt="%d" desc="Medium type report">0</medium_type_report>
+            <media_report type="int" size="4" fmt="%d" desc="Media report">1</media_report>
+            <density_entry type="node" num="0">
+                <primary_density_code type="uint" size="1" fmt="%u" desc="Primary Density Code">90</primary_density_code>
+                <secondary_density_code type="uint" size="1" fmt="%u" desc="Secondary Density Code">90</secondary_density_code>
+                <density_flags type="uint" size="4" fmt="%#x" desc="Density Flags">0xa0</density_flags>
+                <bits_per_mm type="uint" size="4" fmt="%u" desc="Bits per mm">15142</bits_per_mm>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <tracks type="uint" size="4" fmt="%u" desc="Number of Tracks">2176</tracks>
+                <capacity type="uint" size="4" fmt="%u" desc="Capacity">2620446</capacity>
+                <assigning_org type="str" size="8" fmt="%s" desc="Assigning Organization">LTO-CVE</assigning_org>
+                <density_name type="str" size="6" fmt="%s" desc="Density Name">U-616</density_name>
+                <description type="str" size="14" fmt="%s" desc="Description">Ultrium 6/16T</description>
+            </density_entry>
+        </density_report>
+        <density_report type="node">
+            <medium_type_report type="int" size="4" fmt="%d" desc="Medium type report">1</medium_type_report>
+            <media_report type="int" size="4" fmt="%d" desc="Media report">0</media_report>
+            <density_entry type="node" num="0">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">0</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">70</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">820</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO4Data</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 4 Data Tape</description>
+            </density_entry>
+            <density_entry type="node" num="1">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">0</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">88</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">846</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO5Data</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 5 Data Tape</description>
+            </density_entry>
+            <density_entry type="node" num="2">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">0</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">90</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">846</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO6Data</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 6 Data Tape</description>
+            </density_entry>
+            <density_entry type="node" num="3">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">1</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">70</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">820</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO4WORM</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 4 WORM Tape</description>
+            </density_entry>
+            <density_entry type="node" num="4">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">1</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">88</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">846</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO5WORM</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 5 WORM Tape</description>
+            </density_entry>
+            <density_entry type="node" num="5">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">1</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">90</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">846</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO6WORM</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 6 WORM Tape</description>
+            </density_entry>
+        </density_report>
+        <density_report type="node">
+            <medium_type_report type="int" size="4" fmt="%d" desc="Medium type report">1</medium_type_report>
+            <media_report type="int" size="4" fmt="%d" desc="Media report">1</media_report>
+            <density_entry type="node" num="0">
+                <medium_type type="uint" size="1" fmt="%u" desc="Medium Type">0</medium_type>
+                <num_density_codes type="int" size="1" fmt="%d" desc="Number of Density Codes">1</num_density_codes>
+                <density_code_list type="node">
+                    <density_code type="uint" size="1" fmt="%u" desc="Density Code">90</density_code>
+                </density_code_list>
+                <media_width type="uint" size="4" fmt="%u" desc="Media width">127</media_width>
+                <medium_length type="uint" size="4" fmt="%u" desc="Medium length">846</medium_length>
+                <assigning_org type="str" size="3" fmt="%s" desc="Assigning Organization">HP</assigning_org>
+                <medium_type_name type="str" size="9" fmt="%s" desc="Medium type name">LTO6Data</medium_type_name>
+                <description type="str" size="20" fmt="%s" desc="Description">Ultrium 6 Data Tape</description>
+            </density_entry>
+        </density_report>
+    </mtdensity>
+</mtextget>
