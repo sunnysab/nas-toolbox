@@ -4,7 +4,7 @@ use anyhow::Result;
 #[derive(Debug)]
 pub enum Operation {
     /// Write an end-of-file record
-    WriteEOF = 0,
+    WriteEof = 0,
     /// Forward space file
     ForwardSpaceFile = 1,
     /// Backward space file
@@ -75,13 +75,14 @@ impl TapeDevice {
     }
 
     pub fn write_eof(&self, count: u32) -> Result<()> {
-        self.do_tape_op(Operation::EraseToEnd, count).map(|_| ())
+        self.do_tape_op(Operation::WriteEof, count).map(|_| ())
     }
 
     pub fn write_eof_immediately(&self, count: u32) -> Result<()> {
         self.do_tape_op(Operation::WriteEofImmediately, count).map(|_| ())
     }
 
+    /// DDS drive only
     pub fn write_setmark(&self, count: u32) -> Result<()> {
         self.do_tape_op(Operation::WriteSetmark, count).map(|_| ())
     }
@@ -102,10 +103,12 @@ impl TapeDevice {
         self.do_tape_op(Operation::BackwardSpaceRecord, count).map(|_| ())
     }
 
+    /// DDS drive only
     pub fn forward_space_setmark(&self, count: u32) -> Result<()> {
         self.do_tape_op(Operation::ForwardSpaceSetmark, count).map(|_| ())
     }
 
+    /// DDS drive only
     pub fn backward_space_setmark(&self, count: u32) -> Result<()> {
         self.do_tape_op(Operation::BackwardSpaceSetmark, count).map(|_| ())
     }
@@ -134,6 +137,7 @@ impl TapeDevice {
         self.do_tape_op(Operation::SetCompression, enable as u32).map(|_| ())
     }
 
+    /// Zero represents doing quickly
     pub fn erase(&self, count: u32) -> Result<()> {
         self.do_tape_op(Operation::EraseToEnd, count).map(|_| ())
     }
