@@ -5,7 +5,7 @@ use std::ffi::CStr;
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct MtStatusEx {
+pub struct TapeStatusEx {
     /// Device driver name, such as `sa(8)`.
     pub periph_name: String,
     /// Device id. For lib `/dev/sa0`, this value could be `0`.
@@ -202,7 +202,7 @@ impl TapeDevice {
             }
         }
     }
-    pub fn status_ex(&self) -> Result<Option<MtStatusEx>> {
+    pub fn status_ex(&self) -> Result<Option<TapeStatusEx>> {
         let xml = match unsafe { self.status_ex_get_xml()? } {
             Some(content) => content,
             None => return Ok(None),
@@ -210,7 +210,7 @@ impl TapeDevice {
 
         // TODO: We need a specified xml parser to deal with it
         // DensityEntry::density_flags should be a integer, which represents in hex in xml.
-        let result: MtStatusEx = serde_xml_rs::from_str(&xml)?;
+        let result: TapeStatusEx = serde_xml_rs::from_str(&xml)?;
         Ok(Some(result))
     }
 

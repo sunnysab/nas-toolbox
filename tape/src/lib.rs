@@ -17,6 +17,7 @@ pub use limit::BlockLimit;
 pub use locate::{Location, LocationBuilder};
 pub use operate::Operation;
 pub use status::{Density, DriverState, TapeStatus};
+pub use status_ex::TapeStatusEx;
 
 pub struct TapeDevice {
     fd: RawFd,
