@@ -30,4 +30,8 @@ impl TapeDevice {
         let fd = nix::fcntl::open(path, OFlag::O_RDWR, Mode::all())?;
         Ok(Self { fd })
     }
+
+    pub fn fd(&self) -> RawFd {
+        self.fd
+    }
 }
