@@ -1,3 +1,5 @@
+mod db;
+
 use anyhow::{Context, Result};
 use std::io::{Read, Seek, Write};
 use std::os::fd::FromRawFd;
