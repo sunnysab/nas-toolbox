@@ -16,9 +16,9 @@ pub struct BlockLimit {
     /// Smaller granularity means smaller-sized blocks or records, while larger granularity means larger-sized blocks or
     /// records. The choice of granularity affects the storage capacity of the tape, data transfer speed, and the efficiency
     /// of data access. (by ChatGPT)
-    granularity: u32,
-    min_block_length: u32,
-    max_block_length: u32,
+    pub granularity: u32,
+    pub min_block_length: u32,
+    pub max_block_length: u32,
 }
 
 mod ioctl_func {

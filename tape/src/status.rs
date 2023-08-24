@@ -4,13 +4,13 @@ use strum::{EnumIter, EnumString, FromRepr};
 
 #[derive(Debug)]
 pub struct Density {
-    code: u32,
+    pub code: u32,
     /// Bits per mm
-    bpmm: u32,
+    pub bpmm: u32,
     /// Bits per inch
-    bpi: u32,
+    pub bpi: u32,
     /// Description
-    description: &'static str,
+    pub description: &'static str,
 }
 
 /// Copied from `freebsd-src/lib/libmt/mtlib.c`,
@@ -140,47 +140,47 @@ impl From<i32> for BlockSize {
 #[derive(Default)]
 pub struct RawStatus {
     /// type of magnetic tape driver
-    _type: i16,
+    pub _type: i16,
     /// "drive status" register (lib dependent)
-    dsreg: i16,
+    pub dsreg: i16,
     /// "error" register (lib dependent)
-    erreg: i16,
+    pub erreg: i16,
     /// residual count
-    resid: i16,
+    pub resid: i16,
     /// presently operating block size
-    blksiz: i32,
+    pub blksiz: i32,
     /// presently operating density
-    density: i32,
+    pub density: i32,
     /// presently operating compression
-    comp: u32,
+    pub comp: u32,
     /// blocksize for mode 0
-    blksiz0: i32,
+    pub blksiz0: i32,
     /// blocksize for mode 1
-    blksiz1: i32,
+    pub blksiz1: i32,
     /// blocksize for mode 2
-    blksiz2: i32,
+    pub blksiz2: i32,
     /// blocksize for mode 3
-    blksiz3: i32,
+    pub blksiz3: i32,
     /// density for mode 0
-    density0: i32,
+    pub density0: i32,
     /// density for mode 1
-    density1: i32,
+    pub density1: i32,
     /// density for mode 2
-    density2: i32,
+    pub density2: i32,
     /// density for mode 3
-    density3: i32,
+    pub density3: i32,
     /// compression type for mode 0 (not implemented)
-    comp0: u32,
+    pub comp0: u32,
     /// compression type for mode 1 (not implemented)
-    comp1: u32,
+    pub comp1: u32,
     /// compression type for mode 2 (not implemented)
-    comp2: u32,
+    pub comp2: u32,
     /// compression type for mode 3 (not implemented)
-    comp3: u32,
+    pub comp3: u32,
     /// relative file number of current position
-    fileno: i32,
+    pub fileno: i32,
     /// relative block number of current position
-    blkno: i32,
+    pub blkno: i32,
 }
 
 #[derive(Debug, EnumString, FromRepr)]

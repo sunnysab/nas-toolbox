@@ -7,142 +7,142 @@ use std::ffi::CStr;
 #[serde(default)]
 pub struct MtStatusEx {
     /// Device driver name, such as `sa(8)`.
-    periph_name: String,
+    pub periph_name: String,
     /// Device id. For lib `/dev/sa0`, this value could be `0`.
-    unit_number: u32,
+    pub unit_number: u32,
     /// SCSI Vendor ID
-    vendor: String,
+    pub vendor: String,
     /// SCSI Product ID
-    product: String,
+    pub product: String,
     /// SCSI Revision
-    revision: String,
+    pub revision: String,
     /// Serial Number
-    serial_num: String,
+    pub serial_num: String,
     /// Maximum I/O size allowed by driver and controller
-    maxio: u32,
+    pub maxio: u32,
     /// Maximum I/O size reported by controller
-    cpi_maxio: u32,
+    pub cpi_maxio: u32,
     /// Maximum block size supported by tape drive and media
-    max_blk: u32,
+    pub max_blk: u32,
     /// Minimum block size supported by tape drive and media
-    min_blk: u32,
+    pub min_blk: u32,
     /// Block granularity supported by tape drive and media
-    blk_gran: u32,
+    pub blk_gran: u32,
     /// Maximum possible I/O size
-    max_effective_iosize: u32,
+    pub max_effective_iosize: u32,
     /// Set to 1 for fixed block mode, 0 for variable block
-    fixed_mode: i32,
+    pub fixed_mode: i32,
     /// Set to 1 if compression is supported, 0 if not
-    compression_supported: i32,
+    pub compression_supported: i32,
     /// Set to 1 if compression is enabled, 0 if not
-    compression_enabled: i32,
+    pub compression_enabled: i32,
     /// Numeric compression algorithm
-    compression_algorithm: u32,
+    pub compression_algorithm: u32,
     /// protection node described outside
-    protection: Protection,
+    pub protection: Protection,
 
     /// Block size reported by drive or set by user
-    media_blocksize: u32,
+    pub media_blocksize: u32,
     /// Calculated file number, -1 if unknown
-    calculated_fileno: i64,
+    pub calculated_fileno: i64,
     /// Calculated block number relative to file, set to -1 if unknown
-    calculated_rel_blkno: i64,
+    pub calculated_rel_blkno: i64,
     /// File number reported by drive, -1 if unknown
-    reported_fileno: i64,
+    pub reported_fileno: i64,
     /// Block number relative to BOP/BOT reported by drive, -1 if unknown
-    reported_blkno: i64,
+    pub reported_blkno: i64,
     /// Current partition number, 0 is the default
-    partition: i64,
+    pub partition: i64,
     /// Set to 1 if drive is at the beginning of partition/tape, 0 if not, -1 if unknown
-    bop: i32,
+    pub bop: i32,
     /// Set to 1 if drive is past early warning, 0 if not, -1 if unknown
-    eop: i32,
+    pub eop: i32,
     /// Set to 1 if drive is past programmable early warning, 0 if not, -1 if unknown
-    bpew: i32,
+    pub bpew: i32,
     /// Residual for the last I/O
-    residual: i64,
+    pub residual: i64,
     /// Current state of the driver
-    dsreg: i32,
+    pub dsreg: i32,
     /// density node described outside
-    mtdensity: MtDensity,
+    pub mtdensity: MtDensity,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct Protection {
     /// Set to 1 if protection information is supported
-    protection_supported: i32,
+    pub protection_supported: i32,
     /// Current Protection Method
-    prot_method: u32,
+    pub prot_method: u32,
     /// Length of Protection Information
-    pi_length: u32,
+    pub pi_length: u32,
     /// Check Protection on Writes
-    lbp_w: u32,
+    pub lbp_w: u32,
     /// Check and Include Protection on Reads
-    lbp_r: u32,
+    pub lbp_r: u32,
     /// Transfer Protection Information for RECOVER BUFFERED DATA command
-    rbdp: u32,
+    pub rbdp: u32,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct MtDensity {
     /// Current Medium Density Code
-    media_density: u32,
-    density_report: Vec<DensityReport>,
+    pub media_density: u32,
+    pub density_report: Vec<DensityReport>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct DensityReport {
     /// Medium type report
-    medium_type_report: i32,
+    pub medium_type_report: i32,
     /// Media report
-    media_report: i32,
-    density_entry: Vec<DensityEntry>,
+    pub media_report: i32,
+    pub density_entry: Vec<DensityEntry>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct DensityEntry {
     /// Primary Density Code
-    primary_density_code: u8,
+    pub primary_density_code: u8,
     /// Secondary Density Code
-    secondary_density_code: u8,
+    pub secondary_density_code: u8,
     /// Density Flags
-    density_flags: String,
+    pub density_flags: String,
     /// Bits per mm
-    bits_per_mm: u32,
+    pub bits_per_mm: u32,
     /// Media width
-    media_width: u32,
+    pub media_width: u32,
     /// Number of Tracks
-    tracks: u32,
+    pub tracks: u32,
     /// Capacity (in bytes)
-    capacity: u32,
+    pub capacity: u32,
     /// Assigning Organization
-    assigning_org: String,
+    pub assigning_org: String,
     /// Density Name
-    density_name: String,
+    pub density_name: String,
     /// Description
-    description: String,
+    pub description: String,
 
     /* additional fields for medium type report */
     /// Medium type report
-    medium_type: Option<u8>,
+    pub medium_type: Option<u8>,
     /// Number of Density Codes
-    num_density_codes: Option<i8>,
+    pub num_density_codes: Option<i8>,
 
-    density_code_list: Option<DensityCodeList>,
+    pub density_code_list: Option<DensityCodeList>,
     /// Medium length
-    medium_length: Option<u32>,
+    pub medium_length: Option<u32>,
     /// Medium type name
-    medium_type_name: Option<String>,
+    pub medium_type_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct DensityCodeList {
     /// Density Code
-    density_code: Vec<u8>,
+    pub density_code: Vec<u8>,
 }
 
 #[repr(C)]

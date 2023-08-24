@@ -9,17 +9,17 @@ pub struct ScsiTapeErrors {
     // Check Condition noted for these operations. The act
     // of issuing an MTIOCERRSTAT unlatches and clears them.
     /// Last Sense Data For Data I/O
-    io_sense: [u8; 32],
+    pub io_sense: [u8; 32],
     /// residual count from last Data I/O
-    io_resid: i32,
+    pub io_resid: i32,
     /// Command that Caused the Last Data Sense
-    io_cdb: [u8; 16],
+    pub io_cdb: [u8; 16],
     /// Last Sense Data For Control I/O
-    ctl_sense: [u8; 32],
+    pub ctl_sense: [u8; 32],
     /// residual count from last Control I/O
-    ctl_resid: i32,
+    pub ctl_resid: i32,
     /// Command that Caused the Last Control Sense
-    ctl_cdb: [u8; 16],
+    pub ctl_cdb: [u8; 16],
 
     // These are the read and write cumulative error counters.
     // (how to reset cumulative error counters is not yet defined).
